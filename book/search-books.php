@@ -35,7 +35,7 @@ $is_librarian = $_SESSION['admin_role'] == 'Librarian';
 <body>
     <div class="container">
         <a href="<?php echo $is_librarian ? '../librarian-dashboard.php' : '../member-dashboard.php'; ?>">← Back</a>
-        <h2>🔍 Search Books</h2>
+        <h2> Search Books</h2>
         <div class="search-box">
             <form method="GET">
                 <input type="text" name="search" placeholder="Search..." value="<?php echo $search; ?>">
