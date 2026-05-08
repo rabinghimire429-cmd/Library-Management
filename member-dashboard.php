@@ -1,4 +1,9 @@
 <?php
+session_start();
+if(!isset($_SESSION['admin_id'])) {
+    header('Location: index.php');
+    exit();
+}
 
 require_once 'config.php';
 
@@ -17,6 +22,7 @@ $notif_count = $conn->query("SELECT COUNT(*) as count FROM notification WHERE me
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Member Dashboard - LibTech Solutions</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -27,7 +33,44 @@ $notif_count = $conn->query("SELECT COUNT(*) as count FROM notification WHERE me
     <div class="navbar"><div class="logo"><i class="fas fa-book"></i> LibTech Solutions</div><div class="user-info"><div class="avatar"><?php echo strtoupper(substr($name,0,1)); ?></div><span style="font-weight:500;"><?php echo htmlspecialchars($name); ?></span><button class="logout-btn" onclick="window.location.href='auth/logout.php'"><i class="fas fa-sign-out-alt"></i> Logout</button></div></div>
     <div class="container"><div class="welcome-section"><h1>Welcome back, <?php echo htmlspecialchars($name); ?>! 👋</h1><p>Your library journey continues here.</p></div>
     <div class="stats-grid"><div class="stat-card"><div class="stat-number"><?php echo $borrowed_count; ?></div><div class="stat-label"><i class="fas fa-book"></i> Books Borrowed</div></div><div class="stat-card"><div class="stat-number">$<?php echo number_format($total_fines,2); ?></div><div class="stat-label"><i class="fas fa-coins"></i> Pending Fines</div></div><div class="stat-card"><div class="stat-number"><?php echo $notif_count; ?></div><div class="stat-label"><i class="fas fa-bell"></i> Unread Notifications</div></div></div>
-    <div class="menu-grid"><a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find your next read</p></a><a href="B/borrow-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Borrow a Book</h3><p>Checkout books</p></a><a href="B/my-borrowings.php" class="menu-card"><div class="menu-icon">📋</div><h3>My Borrowings</h3><p>Track your books</p></a><a href="B/my-fines.php" class="menu-card"><div class="menu-icon">💰</div><h3>My Fines</h3><p>View & pay fines</p></a><a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Stay updated</p></a></div>
+   <div class="menu-grid">
+
+    <!-- Search Books -->
+    <a href="book/search-books.php" class="menu-card">
+        <div class="menu-icon">🔍</div>
+        <h3>Search Books</h3>
+        <p>Find your next read</p>
+    </a>
+
+    <!-- Borrow Book -->
+    <a href="B/borrow-book.php" class="menu-card">
+        <div class="menu-icon">📚</div>
+        <h3>Borrow a Book</h3>
+        <p>Checkout books</p>
+    </a>
+
+    <!-- My Borrowings -->
+    <a href="B/my-borrowings.php" class="menu-card">
+        <div class="menu-icon">📋</div>
+        <h3>My Borrowings</h3>
+        <p>Track your books</p>
+    </a>
+
+    <!-- My Fines -->
+    <a href="B/my-fines.php" class="menu-card">
+        <div class="menu-icon">💰</div>
+        <h3>My Fines</h3>
+        <p>View & pay fines</p>
+    </a>
+
+    <!-- Notifications -->
+    <a href="Notification/notifications.php" class="menu-card">
+        <div class="menu-icon">🔔</div>
+        <h3>Notifications</h3>
+        <p>Stay updated</p>
+    </a>
+
+</div>
     <div class="borrowed-section" id="borrowedBooks"><h3><i class="fas fa-book-open"></i> Currently Borrowed Books</h3><div class="book-list" id="bookList"><p style="text-align:center; padding:20px;">Loading your borrowed books...</p></div></div></div>
     <div class="footer"><p>© 2026 LibTech Solutions | Secure Library Management System</p></div>
     <script>

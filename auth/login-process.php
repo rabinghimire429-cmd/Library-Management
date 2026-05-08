@@ -1,38 +1,42 @@
 <?php
-
+session_start();
 require_once '../config.php';
 
 $email = $_POST['email'] ?? '';
 $password = $_POST['password'] ?? '';
 $selected_role = $_POST['role'] ?? 'Member';
 
-$result = $conn->query("SELECT * FROM admin WHERE email = '$email' AND is_active = 1");
+// Query using your table column names (capital letters)
+$result = $conn->query("SELECT * FROM admin WHERE Email = '$email' AND Is_active = 1");
 
 if($result->num_rows == 1) {
     $admin = $result->fetch_assoc();
     
-    if($password == $admin['password_hash']) {
+    // Plain text password comparison
+    if($password == $admin['Password_hash']) {
         
-        if($selected_role == 'Librarian' && $admin['role'] != 'Librarian') {
+        // Role validation
+        if($selected_role == 'Librarian' && $admin['Role'] != 'Librarian') {
             header('Location: ../index.php?error=wrong_role&role=member');
             exit();
         }
         
-        if($selected_role == 'Member' && $admin['role'] != 'Member') {
+        if($selected_role == 'Member' && $admin['Role'] != 'Member') {
             header('Location: ../index.php?error=wrong_role&role=librarian');
             exit();
         }
         
         session_regenerate_id(true);
         
-        $_SESSION['admin_id'] = $admin['admin_id'];
-        $_SESSION['admin_email'] = $admin['email'];
-        $_SESSION['admin_role'] = $admin['role'];
+        $_SESSION['admin_id'] = $admin['User_id'];
+        $_SESSION['admin_email'] = $admin['Email'];
+        $_SESSION['admin_role'] = $admin['Role'];
         $_SESSION['LAST_ACTIVITY'] = time();
         
-        $conn->query("UPDATE admin SET last_login = NOW() WHERE admin_id = " . $admin['admin_id']);
+        // Update last login
+        $conn->query("UPDATE admin SET Last_login = NOW() WHERE User_id = " . $admin['User_id']);
         
-        if($admin['role'] == 'Librarian') {
+        if($admin['Role'] == 'Librarian') {
             header('Location: ../librarian-dashboard.php');
         } else {
             header('Location: ../member-dashboard.php');

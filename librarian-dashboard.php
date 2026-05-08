@@ -1,8 +1,19 @@
-<?php
-
+ <?php
+session_start();
+if(!isset($_SESSION['admin_id'])) {
+    header('Location: index.php');
+    exit();
+}
 
 require_once 'config.php';
 
+// Only Librarian can access this page
+if($_SESSION['admin_role'] !== 'Librarian') {
+    header('Location: member-dashboard.php');
+    exit();
+}
+
+// Get statistics
 $total_books = $conn->query("SELECT COUNT(*) as count FROM book")->fetch_assoc()['count'];
 $total_members = $conn->query("SELECT COUNT(*) as count FROM member")->fetch_assoc()['count'];
 $active_borrowings = $conn->query("SELECT COUNT(*) as count FROM transaction WHERE return_date IS NULL")->fetch_assoc()['count'];
@@ -24,7 +35,51 @@ $overdue_count = $conn->query("SELECT COUNT(*) as count FROM transaction WHERE r
     <div class="navbar"><div class="logo"><i class="fas fa-book-open"></i> LibTech Solutions</div><button class="logout-btn" onclick="window.location.href='auth/logout.php'"><i class="fas fa-sign-out-alt"></i> Logout</button></div>
     <div class="container"><div class="welcome-section"><h1>Welcome, Librarian! 👩‍💼</h1><p>Manage your library efficiently from one dashboard</p></div>
     <div class="stats-grid"><div class="stat-card"><div class="stat-number"><?php echo $total_books; ?></div><div class="stat-label"><i class="fas fa-book"></i> Total Books</div></div><div class="stat-card"><div class="stat-number"><?php echo $total_members; ?></div><div class="stat-label"><i class="fas fa-users"></i> Total Members</div></div><div class="stat-card"><div class="stat-number"><?php echo $active_borrowings; ?></div><div class="stat-label"><i class="fas fa-exchange-alt"></i> Active Borrowings</div></div><div class="stat-card"><div class="stat-number"><?php echo $overdue_count; ?></div><div class="stat-label"><i class="fas fa-exclamation-triangle"></i> Overdue Books</div><?php if($overdue_count>0): ?><div class="warning-badge">⚠️ Action Needed</div><?php endif; ?></div></div>
-    <div class="menu-grid"><a href="Books/add-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Add New Book</h3><p>Add books to catalog</p></a><a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find books in catalog</p></a><a href="Member/member-registration.php" class="menu-card"><div class="menu-icon">👥</div><h3>Register Member</h3><p>Add new library members</p></a><a href="Member/member-management.php" class="menu-card"><div class="menu-icon">📊</div><h3>Manage Members</h3><p>View, edit, block members</p></a><a href="overdue-reports.php" class="menu-card"><div class="menu-icon">⚠️</div><h3>Overdue Reports</h3><p>View overdue books & fines</p></a><a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Send & view notifications</p></a></div>
+<div class="menu-grid">
+
+    <!-- Add New Book -->
+    <a href="book/add-book.php" class="menu-card">
+        <div class="menu-icon">📚</div>
+        <h3>Add New Book</h3>
+        <p>Add books to catalog</p>
+    </a>
+
+    <!-- Search Books -->
+    <a href="book/search-books.php" class="menu-card">
+        <div class="menu-icon">🔍</div>
+        <h3>Search Books</h3>
+        <p>Find books in catalog</p>
+    </a>
+
+    <!-- Register Member -->
+    <a href="Member/member-registration.php" class="menu-card">
+        <div class="menu-icon">👥</div>
+        <h3>Register Member</h3>
+        <p>Add new library members</p>
+    </a>
+
+    <!-- Manage Members -->
+    <a href="Member/member-management.php" class="menu-card">
+        <div class="menu-icon">📊</div>
+        <h3>Manage Members</h3>
+        <p>View, edit, block members</p>
+    </a>
+
+    <!-- Overdue Reports -->
+    <a href="overdue-reports.php" class="menu-card">
+        <div class="menu-icon">⚠️</div>
+        <h3>Overdue Reports</h3>
+        <p>View overdue books & fines</p>
+    </a>
+
+    <!-- Notifications -->
+    <a href="Notification/notifications.php" class="menu-card">
+        <div class="menu-icon">🔔</div>
+        <h3>Notifications</h3>
+        <p>Send & view notifications</p>
+    </a>
+
+</div>
     <div class="overdue-section" id="overduePreview"><h3><i class="fas fa-exclamation-triangle"></i> Recent Overdue Books</h3><div class="overdue-list" id="overdueList"><p style="text-align:center; padding:20px;">Loading overdue books...</p></div><div class="view-all"><a href="overdue-reports.php">View All Overdue Reports →</a></div></div></div>
     <div class="footer"><p>© 2026 LibTech Solutions | Secure Library Management System</p></div>
     <script>
