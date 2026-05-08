@@ -65,7 +65,7 @@ if(isset($_SESSION['admin_id'])) {
         .input-group input:focus { outline: none; border-color: #6366f1; background: rgba(255,255,255,0.12); }
         .login-submit { width: 100%; padding: 14px; background: linear-gradient(135deg, #6366f1, #ec4899); border: none; border-radius: 40px; color: white; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.3s; margin-top: 10px; }
         .login-submit:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(99,102,241,0.4); }
-        .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 12px; margin-bottom: 20px; font-size: 13px; color: #f87171; text-align: center; }
+        .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 12px; margin-bottom: 20px; font-size: 13px; color: #f87171; text-align: center; display: none; }
         .modal-footer { padding: 20px 30px 30px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); }
         .modal-footer a { color: #818cf8; text-decoration: none; }
         .demo-info { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 15px; text-align: center; }
@@ -124,12 +124,24 @@ if(isset($_SESSION['admin_id'])) {
             <div class="close-modal" onclick="closeLoginModal()">&times;</div>
             <div class="modal-header"><h2><i class="fas fa-sign-in-alt"></i> Welcome Back</h2></div>
             <div class="modal-body">
-                <?php if(isset($_GET['error'])): ?>
-                    <div class="alert-error"><i class="fas fa-exclamation-triangle"></i> <?php if($_GET['error']=='wrong_role'){if(isset($_GET['role']) && $_GET['role']=='member') echo '❌ This email belongs to a <strong>Librarian</strong>. Please select <strong>Librarian Login</strong>.'; elseif(isset($_GET['role']) && $_GET['role']=='librarian') echo '❌ This email belongs to a <strong>Member</strong>. Please select <strong>Member Login</strong>.'; else echo '❌ Invalid role.';} else echo '❌ Invalid email or password.'; ?></div>
-                <?php endif; ?>
-                <div class="role-selector"><div class="role-btn active" onclick="selectRole('member')">👤 Member Login</div><div class="role-btn" onclick="selectRole('librarian')">📚 Librarian Login</div></div>
-                <form id="memberForm" class="login-form active" method="POST" action="auth/login-process.php"><input type="hidden" name="role" value="Member"><div class="input-group"><label><i class="fas fa-envelope"></i> Email Address</label><input type="email" name="email" placeholder="Enter your email" required></div><div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" name="password" placeholder="Enter your password" required></div><button type="submit" class="login-submit">Login as Member <i class="fas fa-arrow-right"></i></button></form>
-                <form id="librarianForm" class="login-form" method="POST" action="auth/login-process.php"><input type="hidden" name="role" value="Librarian"><div class="input-group"><label><i class="fas fa-envelope"></i> Librarian Email</label><input type="email" name="email" placeholder="Enter your email" required></div><div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" name="password" placeholder="Enter your password" required></div><button type="submit" class="login-submit">Login as Librarian <i class="fas fa-arrow-right"></i></button></form>
+                <div id="ajaxError" class="alert-error" style="display:none;"></div>
+                
+                <div class="role-selector">
+                    <div class="role-btn active" onclick="selectRole('member')">👤 Member Login</div>
+                    <div class="role-btn" onclick="selectRole('librarian')">📚 Librarian Login</div>
+                </div>
+                
+                <div id="memberForm" class="login-form active">
+                    <div class="input-group"><label><i class="fas fa-envelope"></i> Email Address</label><input type="email" id="email" placeholder="Enter your email"></div>
+                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="password" placeholder="Enter your password"></div>
+                    <button type="button" class="login-submit" onclick="doLogin()">Login as Member <i class="fas fa-arrow-right"></i></button>
+                </div>
+                
+                <div id="librarianForm" class="login-form">
+                    <div class="input-group"><label><i class="fas fa-envelope"></i> Librarian Email</label><input type="email" id="librarianEmail" placeholder="Enter your email"></div>
+                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="librarianPassword" placeholder="Enter your password"></div>
+                    <button type="button" class="login-submit" onclick="doLibrarianLogin()">Login as Librarian <i class="fas fa-arrow-right"></i></button>
+                </div>
             </div>
             <div class="modal-footer"><p>New to LibTech Solutions? <a href="register.php">Register Here <i class="fas fa-user-plus"></i></a></p><div class="demo-info"><i class="fas fa-flask"></i> Demo Credentials:<br><strong>Member:</strong> member@test.com / 1234<br><strong>Librarian:</strong> librarian@test.com / 1234</div></div>
         </div>
@@ -156,19 +168,134 @@ if(isset($_SESSION['admin_id'])) {
             <div class="contact-map"><h4><i class="fas fa-globe"></i> Our Location</h4><div class="map-placeholder"><i class="fas fa-map-pin" style="font-size:30px; color:#ec4899;"></i><p style="margin-top:10px;">📍 Niels Brock College<br>Copenhagen, Denmark</p></div></div>
         </div>
     </section>
-    <footer class="footer"><div class="social-links"><a href="#"><i class="fab fa-facebook"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-github"></i></a></div><p>© 2026 LibTech Solutions | Built with <i class="fas fa-heart" style="color:#ec4899;"></i> by De Montfort University Students</p><p style="margin-top:10px; font-size:12px;">Library Management System for CTEC2713 Project</p></footer>
+    <footer class="footer"><div class="social-links"><a href="#"><i class="fab fa-facebook"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-github"></i></a></div><p>© 2026 LibTech Solutions | Built with <i class="fas fa-heart" style="color:#ec4899;"></i> by De Montfort University Students</p></footer>
+    
     <script>
-        function openLoginModal() { document.getElementById('loginModal').classList.add('active'); }
-        function closeLoginModal() { document.getElementById('loginModal').classList.remove('active'); }
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.add('active');
+            document.getElementById('ajaxError').style.display = 'none';
+        }
+        
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.remove('active');
+        }
+        
         function selectRole(role) {
             var memberForm = document.getElementById('memberForm');
             var librarianForm = document.getElementById('librarianForm');
             var btns = document.querySelectorAll('.role-btn');
-            if(role === 'member') { memberForm.classList.add('active'); librarianForm.classList.remove('active'); btns[0].classList.add('active'); btns[1].classList.remove('active'); }
-            else { memberForm.classList.remove('active'); librarianForm.classList.add('active'); btns[0].classList.remove('active'); btns[1].classList.add('active'); }
+            if(role === 'member') {
+                memberForm.classList.add('active');
+                librarianForm.classList.remove('active');
+                btns[0].classList.add('active');
+                btns[1].classList.remove('active');
+            } else {
+                memberForm.classList.remove('active');
+                librarianForm.classList.add('active');
+                btns[0].classList.remove('active');
+                btns[1].classList.add('active');
+            }
+            document.getElementById('ajaxError').style.display = 'none';
         }
-        window.onclick = function(event) { var modal = document.getElementById('loginModal'); if(event.target == modal) modal.classList.remove('active'); }
-        document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', function(e) { e.preventDefault(); var t = document.querySelector(this.getAttribute('href')); if(t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+        
+        function showError(message) {
+            var errorDiv = document.getElementById('ajaxError');
+            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function doLogin() {
+            var email = document.getElementById('email').value;
+            var password = document.getElementById('password').value;
+            var role = 'Member';
+            var btn = event.target;
+            
+            if(email === "") {
+                showError("Please enter your email address");
+                return;
+            }
+            if(password === "") {
+                showError("Please enter your password");
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            
+            fetch('auth/login-ajax.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password, role: role })
+            })
+            .then(response => response.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = 'Login as Member <i class="fas fa-arrow-right"></i>';
+                
+                if(data.success) {
+                    window.location.href = 'member-dashboard.php';
+                } else {
+                    showError(data.message);
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.innerHTML = 'Login as Member <i class="fas fa-arrow-right"></i>';
+                showError('Connection error. Please try again.');
+            });
+        }
+        
+        function doLibrarianLogin() {
+            var email = document.getElementById('librarianEmail').value;
+            var password = document.getElementById('librarianPassword').value;
+            var role = 'Librarian';
+            var btn = event.target;
+            
+            if(email === "") {
+                showError("Please enter your email address");
+                return;
+            }
+            if(password === "") {
+                showError("Please enter your password");
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            
+            fetch('auth/login-ajax.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password, role: role })
+            })
+            .then(response => response.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = 'Login as Librarian <i class="fas fa-arrow-right"></i>';
+                
+                if(data.success) {
+                    window.location.href = 'librarian-dashboard.php';
+                } else {
+                    showError(data.message);
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.innerHTML = 'Login as Librarian <i class="fas fa-arrow-right"></i>';
+                showError('Connection error. Please try again.');
+            });
+        }
+        
+        window.onclick = function(event) { 
+            var modal = document.getElementById('loginModal'); 
+            if(event.target == modal) modal.classList.remove('active'); 
+        }
+        
+        document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', function(e) { 
+            e.preventDefault(); 
+            var t = document.querySelector(this.getAttribute('href')); 
+            if(t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+        }));
     </script>
 </body>
 </html>
