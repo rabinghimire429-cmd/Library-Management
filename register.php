@@ -22,11 +22,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         if($check->num_rows > 0) {
             $error = "Email already exists!";
         } else {
-            // HASH password using bcrypt
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            // Store password as PLAIN TEXT (to match login system)
+            $plain_password = $password;
             
             // Insert into admin table
-            $conn->query("INSERT INTO admin (Email, Password_hash, Role) VALUES ('$email', '$hashed_password', 'Member')");
+            $conn->query("INSERT INTO admin (Email, Password_hash, Role, Created_at) VALUES ('$email', '$plain_password', 'Member', NOW())");
             $admin_id = $conn->insert_id;
             
             // Insert into member table
