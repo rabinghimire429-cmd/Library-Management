@@ -42,7 +42,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     $phone = $_POST['phone'];
     $conn->query("UPDATE member SET full_name = '$full_name', phone = '$phone' WHERE member_id = $member_id");
     $update_msg = "<div class='success-msg'>✅ Profile updated successfully!</div>";
-    // Refresh name
     $name = $full_name;
 }
 ?>
@@ -60,6 +59,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
             min-height: 100vh;
+            color: #e4e6eb;
         }
         .navbar {
             background: rgba(15,23,42,0.95);
@@ -135,7 +135,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             align-items: center;
             gap: 12px;
             padding: 12px 20px;
-            color: white;
+            color: #e4e6eb;
             text-decoration: none;
             transition: all 0.3s;
         }
@@ -156,32 +156,40 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             border: 1px solid rgba(255,255,255,0.1);
         }
         .welcome-section h1 { font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+        .welcome-section p { color: #b9bbbe; }
+        
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 50px; }
         .stat-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; transition: all 0.3s; }
         .stat-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.08); border-color: #6366f1; }
         .stat-number { font-size: 48px; font-weight: 800; background: linear-gradient(135deg, #818cf8, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+        .stat-label { color: #b9bbbe; font-size: 14px; }
+        
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; margin-bottom: 40px; }
         .menu-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; text-decoration: none; transition: all 0.3s; display: block; }
         .menu-card:hover { transform: translateY(-8px); background: rgba(255,255,255,0.1); border-color: #6366f1; }
         .menu-icon { font-size: 50px; margin-bottom: 15px; }
         .menu-card h3 { font-size: 18px; font-weight: 600; color: white; margin-bottom: 8px; }
+        .menu-card p { color: #8b8d94; font-size: 12px; }
+        
         .borrowed-section { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; margin-top: 40px; }
-        .borrowed-section h3 { font-size: 20px; margin-bottom: 20px; color: #818cf8; }
+        .borrowed-section h3 { font-size: 20px; margin-bottom: 20px; color: #a78bfa; }
         .book-list { display: flex; flex-direction: column; gap: 15px; }
         .book-item { background: rgba(255,255,255,0.03); border-radius: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .book-title { font-weight: 600; color: white; }
-        .due-date { font-size: 13px; color: rgba(255,255,255,0.6); }
+        .due-date { font-size: 13px; color: #b9bbbe; }
         .overdue { color: #f87171; }
-        .btn-pay { background: #10b981; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; }
-        .footer { text-align: center; padding: 30px; color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 40px; }
+        
+        .footer { text-align: center; padding: 30px; color: #8b8d94; font-size: 12px; margin-top: 40px; }
+        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: rgba(20,20,50,0.98); border-radius: 30px; padding: 30px; width: 450px; max-width: 90%; border: 1px solid rgba(255,255,255,0.2); }
-        .modal-content h3 { margin-bottom: 20px; color: #818cf8; }
-        .modal-content input { width: 100%; padding: 12px; margin: 10px 0; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; }
+        .modal-content h3 { margin-bottom: 20px; color: #a78bfa; }
+        .modal-content input { width: 100%; padding: 12px; margin: 10px 0; background: #0f1419; border: 1px solid #2d3139; border-radius: 12px; color: #e4e6eb; }
         .modal-content button { width: 100%; padding: 12px; background: linear-gradient(135deg, #6366f1, #ec4899); border: none; border-radius: 12px; color: white; cursor: pointer; }
         .close-btn { float: right; font-size: 24px; cursor: pointer; color: #888; }
         .success-msg { background: rgba(16,185,129,0.2); color: #34d399; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        
         @media (max-width: 768px) { .navbar { flex-direction: column; gap: 15px; padding: 15px 20px; } .container { padding: 0 20px; } .welcome-section h1 { font-size: 28px; } }
     </style>
 </head>
@@ -199,8 +207,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             </div>
             <div class="dropdown-content">
                 <a href="#" onclick="openEditProfileModal()"><i class="fas fa-user-edit"></i> Edit Profile</a>
-                <a href="my-fines.php"><i class="fas fa-coins"></i> My Fines</a>
-                <a href="my-borrowings.php"><i class="fas fa-book"></i> My Borrowings</a>
+                <a href="B/my-fines.php"><i class="fas fa-coins"></i> My Fines</a>
+                <a href="B/my-borrowings.php"><i class="fas fa-book"></i> My Borrowings</a>
                 <a href="auth/logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>
@@ -237,6 +245,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         <div class="modal-content">
             <span class="close-btn" onclick="closeEditProfileModal()">&times;</span>
             <h3>✏️ Edit Profile</h3>
+            <?php echo $update_msg; ?>
             <form method="POST">
                 <input type="text" name="full_name" placeholder="Full Name" value="<?php echo htmlspecialchars($name); ?>" required>
                 <input type="tel" name="phone" placeholder="Phone Number" value="<?php echo htmlspecialchars($member_phone); ?>" required>
