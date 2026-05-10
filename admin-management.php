@@ -121,7 +121,7 @@ $result = $conn->query($query);
 
         <div class="card">
             <h2>👥 Admin Management</h2>
-            <p>Manage system users - Add, Edit, Delete, List, Find, Filter</p>
+            
 
             <?php if(isset($_GET['msg'])): ?>
                 <div class="success-msg">✅ Operation completed successfully!</div>
