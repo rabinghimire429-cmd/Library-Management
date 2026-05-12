@@ -226,13 +226,13 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             <div class="stat-card"><div class="stat-number"><?php echo $notif_count; ?></div><div class="stat-label"><i class="fas fa-bell"></i> Unread Notifications</div></div>
         </div>
 
-        <div class="menu-grid">
-            <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find your next read</p></a>
-            <a href="B/borrow-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Borrow a Book</h3><p>Checkout books</p></a>
-            <a href="B/my-borrowings.php" class="menu-card"><div class="menu-icon">📋</div><h3>My Borrowings</h3><p>Track your books</p></a>
-            <a href="B/my-fines.php" class="menu-card"><div class="menu-icon">💰</div><h3>My Fines</h3><p>View & pay fines</p></a>
-            <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Stay updated</p></a>
-        </div>
+       <div class="menu-grid">
+    <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find your next read</p></a>
+    <a href="B/borrow-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Borrow a Book</h3><p>Checkout books</p></a>
+    <a href="B/my-borrowings.php" class="menu-card"><div class="menu-icon">📋</div><h3>My Borrowings</h3><p>Track your books</p></a>
+    <a href="B/my-fines.php" class="menu-card"><div class="menu-icon">💰</div><h3>My Fines</h3><p>View & pay fines</p></a>
+    <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Stay updated</p></a>
+</div>
 
         <div class="borrowed-section" id="borrowedBooks">
             <h3><i class="fas fa-book-open"></i> Currently Borrowed Books</h3>
