@@ -70,4 +70,4 @@ $notif_count = $conn->query("SELECT COUNT(*) as count FROM notification WHERE me
     </script>
 </body>
 </html>
-```
+
