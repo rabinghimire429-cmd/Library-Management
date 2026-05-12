@@ -12,21 +12,33 @@ if($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+$admin_id = intval($_SESSION['admin_id']);
+
+$member_result = $conn->query("
+    SELECT member_id
+    FROM member
+    WHERE admin_id = $admin_id
+");
+
+$member = $member_result->fetch_assoc();
+$member_id = $member['member_id'] ?? 0;
+
+if($member_id <= 0) {
+    die("Invalid member account.");
+}
+
 $id = intval($_GET['id'] ?? 0);
 
 if($id <= 0) {
-    die("Invalid transaction ID");
+    die("Invalid transaction ID.");
 }
-
-/* =========================================
-   GET TRANSACTION
-========================================= */
 
 $result = $conn->query("
     SELECT t.*, b.title
     FROM transaction t
     JOIN book b ON t.book_id = b.book_id
     WHERE t.transaction_id = $id
+    AND t.member_id = $member_id
 ");
 
 if($result->num_rows == 0) {
@@ -35,52 +47,52 @@ if($result->num_rows == 0) {
 
 $transaction = $result->fetch_assoc();
 
-/* =========================================
-   UPDATE TRANSACTION
-========================================= */
+if($transaction['status'] == 'Returned') {
+    die("Returned transactions cannot be edited.");
+}
 
-$msg = "";
+$msg = '';
 
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
-    $due_date = $_POST['due_date'];
+    $due_date = $_POST['due_date'] ?? '';
 
     if(empty($due_date)) {
-
         $msg = "Due date is required.";
-
+    } elseif($due_date < $transaction['borrow_date']) {
+        $msg = "Due date cannot be before borrow date.";
     } else {
 
         $conn->query("
             UPDATE transaction
             SET due_date = '$due_date'
             WHERE transaction_id = $id
+            AND member_id = $member_id
+            AND status != 'Returned'
         ");
 
-        $msg = "✅ Transaction updated successfully!";
+        header('Location: my-borrowings.php');
+        exit();
     }
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
-
-<title>Edit Transaction</title>
+<title>Edit Borrowing</title>
 
 <style>
-
 body {
-    font-family: 'Segoe UI';
+    font-family: 'Segoe UI', sans-serif;
     background: #0a0a2a;
     color: white;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    margin: 0;
 }
 
 .container {
@@ -90,9 +102,14 @@ body {
     border-radius: 25px;
 }
 
+a {
+    color: #818cf8;
+    text-decoration: none;
+}
+
 input {
     width: 100%;
-    padding: 12px;
+    padding: 13px;
     margin-top: 10px;
     border-radius: 10px;
     border: none;
@@ -108,26 +125,19 @@ button {
     border-radius: 12px;
     background: linear-gradient(135deg, #6366f1, #ec4899);
     color: white;
-    cursor: pointer;
     font-weight: bold;
-}
-
-a {
-    color: #818cf8;
-    text-decoration: none;
+    cursor: pointer;
 }
 
 .msg {
-    background: rgba(16,185,129,0.2);
-    border: 1px solid #10b981;
+    background: rgba(239,68,68,0.2);
+    border: 1px solid #ef4444;
+    color: #f87171;
     padding: 12px;
     border-radius: 10px;
-    margin-bottom: 20px;
-    color: #34d399;
+    margin-bottom: 15px;
 }
-
 </style>
-
 </head>
 
 <body>
@@ -139,22 +149,11 @@ a {
     <h2>✏️ Edit Borrowing</h2>
 
     <?php if($msg): ?>
-
-        <div class="msg">
-            <?php echo $msg; ?>
-        </div>
-
+        <div class="msg"><?php echo $msg; ?></div>
     <?php endif; ?>
 
-    <p>
-        <strong>Book:</strong>
-        <?php echo htmlspecialchars($transaction['title']); ?>
-    </p>
-
-    <p>
-        <strong>Borrow Date:</strong>
-        <?php echo $transaction['borrow_date']; ?>
-    </p>
+    <p><strong>Book:</strong> <?php echo htmlspecialchars($transaction['title']); ?></p>
+    <p><strong>Borrow Date:</strong> <?php echo $transaction['borrow_date']; ?></p>
 
     <form method="POST">
 
@@ -165,9 +164,7 @@ a {
                value="<?php echo $transaction['due_date']; ?>"
                required>
 
-        <button type="submit">
-            Update Transaction
-        </button>
+        <button type="submit">Update Due Date</button>
 
     </form>
 
