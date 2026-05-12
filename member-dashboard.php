@@ -274,4 +274,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         }).catch(()=>{ document.getElementById('bookList').innerHTML = '<p style="text-align:center; padding:20px;">❌ Error loading borrowed books.</p>'; });
     </script>
 </body>
+<<<<<<< HEAD
 </html>
+
+=======
+</html>
+>>>>>>> c37450f4c23482ded51e412a8bc6b94278ffbaa1
