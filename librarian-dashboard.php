@@ -130,14 +130,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         </div>
         
         <div class="menu-grid">
-            <a href="Books/add-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Add New Book</h3><p>Add books to catalog</p></a>
-            <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find books in catalog</p></a>
-            <a href="Member/member-registration.php" class="menu-card"><div class="menu-icon">👥</div><h3>Register Member</h3><p>Add new library members</p></a>
-            <a href="Member/member-management.php" class="menu-card"><div class="menu-icon">📊</div><h3>Manage Members</h3><p>View, edit, block members</p></a>
-            <a href="overdue-reports.php" class="menu-card"><div class="menu-icon">⚠️</div><h3>Overdue Reports</h3><p>View overdue books & fines</p></a>
-            <a href="admin-management.php" class="menu-card"><div class="menu-icon">⚙️</div><h3>Admin Users</h3><p>Manage system admins</p></a>
-            <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Send & view notifications</p></a>
-        </div>
+    <a href="Books/add-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Add New Book</h3><p>Add books to catalog</p></a>
+    <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find books in catalog</p></a>
+    <a href="Member/member-registration.php" class="menu-card"><div class="menu-icon">👥</div><h3>Register Member</h3><p>Add new library members</p></a>
+    <a href="Member/member-management.php" class="menu-card"><div class="menu-icon">📊</div><h3>Manage Members</h3><p>View, edit, block members</p></a>
+    <a href="reports/overdue-reports.php" class="menu-card"><div class="menu-icon">⚠️</div><h3>Overdue Reports</h3><p>View overdue books & fines</p></a>
+    <a href="admin-management.php" class="menu-card"><div class="menu-icon">⚙️</div><h3>Admin Users</h3><p>Manage system admins</p></a>
+    <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Send & view notifications</p></a>
+</div>
     </div>
 
     <div id="editProfileModal" class="modal">
