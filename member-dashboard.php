@@ -1,4 +1,10 @@
 <?php
+/**
+ 
+ * FUNCTIONALITY: List, Display borrowed books, due dates, fines
+ * ETHICS: Transparency - Help section explains how system works
+ */
+
 session_start();
 if(!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
@@ -61,6 +67,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             min-height: 100vh;
             color: #e4e6eb;
         }
+        
+        /* Navigation Bar */
         .navbar {
             background: rgba(15,23,42,0.95);
             backdrop-filter: blur(12px);
@@ -146,7 +154,10 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             color: #f87171 !important;
         }
         
+        /* Main Container */
         .container { max-width: 1400px; margin: 40px auto; padding: 0 40px; }
+        
+        /* Welcome Section */
         .welcome-section {
             background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15));
             border-radius: 40px;
@@ -158,12 +169,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .welcome-section h1 { font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
         .welcome-section p { color: #b9bbbe; }
         
+        /* Stats Cards */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 50px; }
         .stat-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; transition: all 0.3s; }
         .stat-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.08); border-color: #6366f1; }
         .stat-number { font-size: 48px; font-weight: 800; background: linear-gradient(135deg, #818cf8, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
         .stat-label { color: #b9bbbe; font-size: 14px; }
         
+        /* Menu Grid */
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; margin-bottom: 40px; }
         .menu-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; text-decoration: none; transition: all 0.3s; display: block; }
         .menu-card:hover { transform: translateY(-8px); background: rgba(255,255,255,0.1); border-color: #6366f1; }
@@ -171,6 +184,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .menu-card h3 { font-size: 18px; font-weight: 600; color: white; margin-bottom: 8px; }
         .menu-card p { color: #8b8d94; font-size: 12px; }
         
+        /* Borrowed Books Section */
         .borrowed-section { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; margin-top: 40px; }
         .borrowed-section h3 { font-size: 20px; margin-bottom: 20px; color: #a78bfa; }
         .book-list { display: flex; flex-direction: column; gap: 15px; }
@@ -179,8 +193,17 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .due-date { font-size: 13px; color: #b9bbbe; }
         .overdue { color: #f87171; }
         
-        .footer { text-align: center; padding: 30px; color: #8b8d94; font-size: 12px; margin-top: 40px; }
+        /* Help Section - Ethics: Transparency */
+        .help-section { background: rgba(99,102,241,0.08); border-radius: 24px; padding: 25px; margin-top: 40px; border: 1px solid rgba(99,102,241,0.2); }
+        .help-section h3 { color: #a78bfa; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .help-card { background: rgba(255,255,255,0.03); border-radius: 16px; padding: 15px; }
+        .help-card strong { display: block; margin-bottom: 8px; }
+        .help-card p { font-size: 13px; color: #b9bbbe; line-height: 1.5; }
+        .help-footer { margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        .help-footer p { font-size: 12px; color: #8b8d94; }
         
+        /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: rgba(20,20,50,0.98); border-radius: 30px; padding: 30px; width: 450px; max-width: 90%; border: 1px solid rgba(255,255,255,0.2); }
@@ -190,10 +213,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .close-btn { float: right; font-size: 24px; cursor: pointer; color: #888; }
         .success-msg { background: rgba(16,185,129,0.2); color: #34d399; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
         
-        @media (max-width: 768px) { .navbar { flex-direction: column; gap: 15px; padding: 15px 20px; } .container { padding: 0 20px; } .welcome-section h1 { font-size: 28px; } }
+        /* Footer */
+        .footer { text-align: center; padding: 30px; color: #8b8d94; font-size: 12px; margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); }
+        
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; gap: 15px; padding: 15px 20px; }
+            .container { padding: 0 20px; }
+            .welcome-section h1 { font-size: 28px; }
+            .welcome-section { padding: 30px; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
+    <!-- Navigation Bar with Logo and Profile Dropdown -->
     <div class="navbar">
         <div class="logo">
             <img src="logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
@@ -215,28 +248,62 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     </div>
 
     <div class="container">
+        <!-- Welcome Section -->
         <div class="welcome-section">
             <h1>Welcome back, <?php echo htmlspecialchars($name); ?>! 👋</h1>
             <p>Your library journey continues here.</p>
         </div>
 
+        <!-- Statistics Cards -->
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-number"><?php echo $borrowed_count; ?></div><div class="stat-label"><i class="fas fa-book"></i> Books Borrowed</div></div>
             <div class="stat-card"><div class="stat-number">$<?php echo number_format($total_fines, 2); ?></div><div class="stat-label"><i class="fas fa-coins"></i> Pending Fines</div></div>
             <div class="stat-card"><div class="stat-number"><?php echo $notif_count; ?></div><div class="stat-label"><i class="fas fa-bell"></i> Unread Notifications</div></div>
         </div>
 
-       <div class="menu-grid">
-    <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find your next read</p></a>
-    <a href="B/borrow-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Borrow a Book</h3><p>Checkout books</p></a>
-    <a href="B/my-borrowings.php" class="menu-card"><div class="menu-icon">📋</div><h3>My Borrowings</h3><p>Track your books</p></a>
-    <a href="B/my-fines.php" class="menu-card"><div class="menu-icon">💰</div><h3>My Fines</h3><p>View & pay fines</p></a>
-    <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Stay updated</p></a>
-</div>
+        <!-- Menu Grid -->
+        <div class="menu-grid">
+            <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find your next read</p></a>
+            <a href="B/borrow-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Borrow a Book</h3><p>Checkout books</p></a>
+            <a href="B/my-borrowings.php" class="menu-card"><div class="menu-icon">📋</div><h3>My Borrowings</h3><p>Track your books</p></a>
+            <a href="B/my-fines.php" class="menu-card"><div class="menu-icon">💰</div><h3>My Fines</h3><p>View & pay fines</p></a>
+            <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Stay updated</p></a>
+        </div>
 
+        <!-- Currently Borrowed Books Section -->
         <div class="borrowed-section" id="borrowedBooks">
             <h3><i class="fas fa-book-open"></i> Currently Borrowed Books</h3>
             <div class="book-list" id="bookList"><p style="text-align:center; padding:20px;">Loading your borrowed books...</p></div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- ETHICS: Transparency - Help Section          -->
+        <!-- Explains how the system works to users       -->
+        <!-- This addresses the Ethics Checklist requirement -->
+        <!-- ============================================= -->
+        <div class="help-section">
+            <h3><i class="fas fa-question-circle"></i> How the Library System Works</h3>
+            <div class="help-grid">
+                <div class="help-card">
+                    <strong style="color: #34d399;">📖 Borrowing Books</strong>
+                    <p>Members can borrow books for 14 days. The due date is automatically calculated from the borrow date. You can view your borrowed books and due dates on this dashboard.</p>
+                </div>
+                <div class="help-card">
+                    <strong style="color: #f87171;">💰 Fine Calculation</strong>
+                    <p>Late returns incur a fine of <strong>$0.50 per day</strong>. The fine is calculated automatically based on the due date. All members are charged the same rate - no exceptions.</p>
+                </div>
+                <div class="help-card">
+                    <strong style="color: #818cf8;">🔔 Notifications</strong>
+                    <p>You will receive email notifications for borrow confirmations, due date reminders, and fine payments. Check your notification center for all communications.</p>
+                </div>
+                <div class="help-card">
+                    <strong style="color: #fbbf24;">🔒 Privacy & Security</strong>
+                    <p>Your personal information is only used for library operations. Passwords are encrypted using bcrypt. Sessions automatically expire after 30 minutes of inactivity for your security.</p>
+                </div>
+            </div>
+            <div class="help-footer">
+                <p><i class="fas fa-shield-alt"></i> For questions about fines or due dates, please contact your librarian.</p>
+            </div>
         </div>
     </div>
 
@@ -254,7 +321,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         </div>
     </div>
 
-    <div class="footer"><p>© 2026 LibTech Solutions | Secure Library Management System</p></div>
+    <div class="footer">
+        <p>© 2026 LibTech Solutions | Secure Library Management System | Built with <i class="fas fa-heart" style="color:#ec4899;"></i> by DMU Students</p>
+    </div>
 
     <script>
         function openEditProfileModal() { document.getElementById('editProfileModal').classList.add('active'); }
@@ -274,9 +343,4 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         }).catch(()=>{ document.getElementById('bookList').innerHTML = '<p style="text-align:center; padding:20px;">❌ Error loading borrowed books.</p>'; });
     </script>
 </body>
-<<<<<<< HEAD
 </html>
-
-=======
-</html>
->>>>>>> c37450f4c23482ded51e412a8bc6b94278ffbaa1
