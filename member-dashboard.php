@@ -1,11 +1,15 @@
 <?php
 /**
- 
- * FUNCTIONALITY: List, Display borrowed books, due dates, fines
- * ETHICS: Transparency - Help section explains how system works
+ * Member Dashboard - Secure Version
  */
 
 session_start();
+
+// CSRF Protection
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if(!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit();
@@ -16,11 +20,14 @@ require_once 'config.php';
 $admin_id = $_SESSION['admin_id'];
 $admin_email = $_SESSION['admin_email'];
 
-// Get member details
-$member_query = $conn->query("SELECT * FROM member WHERE admin_id = $admin_id");
+// Get member details using prepared statement
+$stmt = $conn->prepare("SELECT * FROM member WHERE admin_id = ?");
+$stmt->bind_param("i", $admin_id);
+$stmt->execute();
+$member_query = $stmt->get_result();
 $member = $member_query->fetch_assoc();
+$stmt->close();
 
-// Fix name: if full_name is empty, use email username
 if($member && !empty($member['full_name']) && $member['full_name'] != $member['email']) {
     $name = $member['full_name'];
 } else {
@@ -32,23 +39,45 @@ $member_id = $member['member_id'] ?? 0;
 $member_phone = $member['phone'] ?? '';
 $member_email = $member['email'] ?? $admin_email;
 
-// Get borrowed books count
-$borrowed_count = $conn->query("SELECT COUNT(*) as count FROM transaction WHERE member_id = $member_id AND return_date IS NULL")->fetch_assoc()['count'];
+// Get borrowed books count using prepared statement
+$borrow_stmt = $conn->prepare("SELECT COUNT(*) as count FROM transaction WHERE member_id = ? AND return_date IS NULL");
+$borrow_stmt->bind_param("i", $member_id);
+$borrow_stmt->execute();
+$borrowed_count = $borrow_stmt->get_result()->fetch_assoc()['count'];
+$borrow_stmt->close();
 
-// Get total fines
-$total_fines = $conn->query("SELECT SUM(fine_amount) as total FROM transaction WHERE member_id = $member_id AND fine_paid = 0")->fetch_assoc()['total'] ?? 0;
+// Get total fines using prepared statement
+$fine_stmt = $conn->prepare("SELECT SUM(fine_amount) as total FROM transaction WHERE member_id = ? AND fine_paid = 0");
+$fine_stmt->bind_param("i", $member_id);
+$fine_stmt->execute();
+$total_fines = $fine_stmt->get_result()->fetch_assoc()['total'] ?? 0;
+$fine_stmt->close();
 
-// Get unread notifications count
-$notif_count = $conn->query("SELECT COUNT(*) as count FROM notification WHERE member_id = $member_id AND read_status = 0")->fetch_assoc()['count'];
+// Get unread notifications count using prepared statement
+$notif_stmt = $conn->prepare("SELECT COUNT(*) as count FROM notification WHERE member_id = ? AND read_status = 0");
+$notif_stmt->bind_param("i", $member_id);
+$notif_stmt->execute();
+$notif_count = $notif_stmt->get_result()->fetch_assoc()['count'];
+$notif_stmt->close();
 
 // Update profile
 $update_msg = '';
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
-    $full_name = $_POST['full_name'];
-    $phone = $_POST['phone'];
-    $conn->query("UPDATE member SET full_name = '$full_name', phone = '$phone' WHERE member_id = $member_id");
-    $update_msg = "<div class='success-msg'>✅ Profile updated successfully!</div>";
-    $name = $full_name;
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $update_msg = "<div class='success-msg' style='background:rgba(239,68,68,0.2); color:#f87171;'>❌ Security validation failed!</div>";
+    } else {
+        $full_name = htmlspecialchars($_POST['full_name']);
+        $phone = htmlspecialchars($_POST['phone']);
+        
+        $update_stmt = $conn->prepare("UPDATE member SET full_name = ?, phone = ? WHERE member_id = ?");
+        $update_stmt->bind_param("ssi", $full_name, $phone, $member_id);
+        $update_stmt->execute();
+        $update_stmt->close();
+        
+        $update_msg = "<div class='success-msg'>✅ Profile updated successfully!</div>";
+        $name = $full_name;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -68,7 +97,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             color: #e4e6eb;
         }
         
-        /* Navigation Bar */
         .navbar {
             background: rgba(15,23,42,0.95);
             backdrop-filter: blur(12px);
@@ -89,7 +117,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .logo-img { height: 45px; width: auto; border-radius: 10px; }
         .logo-text { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        /* Profile Dropdown */
         .profile-dropdown {
             position: relative;
             display: inline-block;
@@ -154,10 +181,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             color: #f87171 !important;
         }
         
-        /* Main Container */
         .container { max-width: 1400px; margin: 40px auto; padding: 0 40px; }
         
-        /* Welcome Section */
         .welcome-section {
             background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15));
             border-radius: 40px;
@@ -169,14 +194,12 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .welcome-section h1 { font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
         .welcome-section p { color: #b9bbbe; }
         
-        /* Stats Cards */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 50px; }
         .stat-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; transition: all 0.3s; }
         .stat-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.08); border-color: #6366f1; }
         .stat-number { font-size: 48px; font-weight: 800; background: linear-gradient(135deg, #818cf8, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
         .stat-label { color: #b9bbbe; font-size: 14px; }
         
-        /* Menu Grid */
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; margin-bottom: 40px; }
         .menu-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; text-decoration: none; transition: all 0.3s; display: block; }
         .menu-card:hover { transform: translateY(-8px); background: rgba(255,255,255,0.1); border-color: #6366f1; }
@@ -184,7 +207,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .menu-card h3 { font-size: 18px; font-weight: 600; color: white; margin-bottom: 8px; }
         .menu-card p { color: #8b8d94; font-size: 12px; }
         
-        /* Borrowed Books Section */
         .borrowed-section { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; margin-top: 40px; }
         .borrowed-section h3 { font-size: 20px; margin-bottom: 20px; color: #a78bfa; }
         .book-list { display: flex; flex-direction: column; gap: 15px; }
@@ -193,7 +215,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .due-date { font-size: 13px; color: #b9bbbe; }
         .overdue { color: #f87171; }
         
-        /* Help Section - Ethics: Transparency */
         .help-section { background: rgba(99,102,241,0.08); border-radius: 24px; padding: 25px; margin-top: 40px; border: 1px solid rgba(99,102,241,0.2); }
         .help-section h3 { color: #a78bfa; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
         .help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
@@ -203,7 +224,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .help-footer { margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; }
         .help-footer p { font-size: 12px; color: #8b8d94; }
         
-        /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: rgba(20,20,50,0.98); border-radius: 30px; padding: 30px; width: 450px; max-width: 90%; border: 1px solid rgba(255,255,255,0.2); }
@@ -213,7 +233,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .close-btn { float: right; font-size: 24px; cursor: pointer; color: #888; }
         .success-msg { background: rgba(16,185,129,0.2); color: #34d399; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
         
-        /* Footer */
         .footer { text-align: center; padding: 30px; color: #8b8d94; font-size: 12px; margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); }
         
         @media (max-width: 768px) {
@@ -226,7 +245,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     </style>
 </head>
 <body>
-    <!-- Navigation Bar with Logo and Profile Dropdown -->
     <div class="navbar">
         <div class="logo">
             <img src="logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
@@ -248,20 +266,17 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     </div>
 
     <div class="container">
-        <!-- Welcome Section -->
         <div class="welcome-section">
             <h1>Welcome back, <?php echo htmlspecialchars($name); ?>! 👋</h1>
             <p>Your library journey continues here.</p>
         </div>
 
-        <!-- Statistics Cards -->
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-number"><?php echo $borrowed_count; ?></div><div class="stat-label"><i class="fas fa-book"></i> Books Borrowed</div></div>
             <div class="stat-card"><div class="stat-number">$<?php echo number_format($total_fines, 2); ?></div><div class="stat-label"><i class="fas fa-coins"></i> Pending Fines</div></div>
             <div class="stat-card"><div class="stat-number"><?php echo $notif_count; ?></div><div class="stat-label"><i class="fas fa-bell"></i> Unread Notifications</div></div>
         </div>
 
-        <!-- Menu Grid -->
         <div class="menu-grid">
             <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find your next read</p></a>
             <a href="B/borrow-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Borrow a Book</h3><p>Checkout books</p></a>
@@ -270,17 +285,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Stay updated</p></a>
         </div>
 
-        <!-- Currently Borrowed Books Section -->
         <div class="borrowed-section" id="borrowedBooks">
             <h3><i class="fas fa-book-open"></i> Currently Borrowed Books</h3>
             <div class="book-list" id="bookList"><p style="text-align:center; padding:20px;">Loading your borrowed books...</p></div>
         </div>
 
-        <!-- ============================================= -->
-        <!-- ETHICS: Transparency - Help Section          -->
-        <!-- Explains how the system works to users       -->
-        <!-- This addresses the Ethics Checklist requirement -->
-        <!-- ============================================= -->
         <div class="help-section">
             <h3><i class="fas fa-question-circle"></i> How the Library System Works</h3>
             <div class="help-grid">
@@ -307,13 +316,13 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         </div>
     </div>
 
-    <!-- Edit Profile Modal -->
     <div id="editProfileModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeEditProfileModal()">&times;</span>
             <h3>✏️ Edit Profile</h3>
             <?php echo $update_msg; ?>
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="text" name="full_name" placeholder="Full Name" value="<?php echo htmlspecialchars($name); ?>" required>
                 <input type="tel" name="phone" placeholder="Phone Number" value="<?php echo htmlspecialchars($member_phone); ?>" required>
                 <button type="submit" name="update_profile">Save Changes</button>
