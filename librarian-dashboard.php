@@ -203,4 +203,144 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .close-btn { float: right; font-size: 24px; cursor: pointer; color: #888; }
         .success-msg { background: rgba(16,185,129,0.2); color: #34d399; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
         
-        /*
+        /* Footer */
+        .footer { text-align: center; padding: 30px; color: #8b8d94; font-size: 12px; margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); }
+        
+        @media (max-width: 768px) {
+            .navbar { flex-direction: column; gap: 15px; padding: 15px 20px; }
+            .container { padding: 0 20px; }
+            .welcome-section h1 { font-size: 28px; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar with Logo and Profile Dropdown -->
+    <div class="navbar">
+        <div class="logo">
+            <img src="logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+            <span class="logo-text">LibTech Solutions</span>
+        </div>
+        <div class="profile-dropdown">
+            <div class="profile-btn">
+                <div class="avatar"><?php echo strtoupper(substr($name, 0, 1)); ?></div>
+                <span class="profile-name"><?php echo htmlspecialchars($name); ?></span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="dropdown-content">
+                <a href="#" onclick="openEditProfileModal()"><i class="fas fa-user-edit"></i> Edit Profile</a>
+                <a href="admin-management.php"><i class="fas fa-users-cog"></i> Admin Users</a>
+                <a href="auth/logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Welcome Section -->
+        <div class="welcome-section">
+            <h1>Welcome, <?php echo htmlspecialchars($name); ?>! 👩‍💼</h1>
+            <p>Manage your library efficiently</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-number"><?php echo $total_books; ?></div><div class="stat-label"><i class="fas fa-book"></i> Total Books</div></div>
+            <div class="stat-card"><div class="stat-number"><?php echo $total_members; ?></div><div class="stat-label"><i class="fas fa-users"></i> Total Members</div></div>
+            <div class="stat-card"><div class="stat-number"><?php echo $active_borrowings; ?></div><div class="stat-label"><i class="fas fa-exchange-alt"></i> Active Borrowings</div></div>
+            <div class="stat-card"><div class="stat-number"><?php echo $overdue_count; ?></div><div class="stat-label"><i class="fas fa-exclamation-triangle"></i> Overdue Books</div>
+            <?php if($overdue_count > 0): ?><div class="warning-badge">⚠️ Action Needed</div><?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Menu Grid -->
+        <div class="menu-grid">
+            <a href="Books/add-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Add New Book</h3><p>Add books to catalog</p></a>
+            <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find books in catalog</p></a>
+            <a href="Member/member-registration.php" class="menu-card"><div class="menu-icon">👥</div><h3>Register Member</h3><p>Add new library members</p></a>
+            <a href="Member/member-management.php" class="menu-card"><div class="menu-icon">📊</div><h3>Manage Members</h3><p>View, edit, block members</p></a>
+            <a href="overdue-reports.php" class="menu-card"><div class="menu-icon">⚠️</div><h3>Overdue Reports</h3><p>View overdue books & fines</p></a>
+            <a href="admin-management.php" class="menu-card"><div class="menu-icon">⚙️</div><h3>Admin Users</h3><p>Manage system admins</p></a>
+            <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Send & view notifications</p></a>
+        </div>
+
+        <!-- Recent Overdue Books Preview -->
+        <div class="overdue-section">
+            <h3><i class="fas fa-exclamation-triangle"></i> Recent Overdue Books</h3>
+            <div class="overdue-list">
+                <?php if($overdue_preview && $overdue_preview->num_rows > 0): ?>
+                    <?php while($overdue = $overdue_preview->fetch_assoc()): 
+                        $days = (strtotime(date('Y-m-d')) - strtotime($overdue['due_date'])) / (60 * 60 * 24);
+                    ?>
+                    <div class="overdue-item">
+                        <div>
+                            <div class="overdue-member"><?php echo htmlspecialchars($overdue['member_name']); ?></div>
+                            <div class="overdue-book">"<?php echo htmlspecialchars($overdue['book_title']); ?>"</div>
+                        </div>
+                        <div>
+                            <div class="overdue-days"><?php echo round($days); ?> days overdue</div>
+                            <div style="font-size: 12px;">Fine: $<?php echo number_format($days * 0.50, 2); ?></div>
+                        </div>
+                    </div>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <p style="text-align:center; padding:20px;">✅ No overdue books! Great job members!</p>
+                <?php endif; ?>
+            </div>
+            <div class="view-all">
+                <a href="overdue-reports.php">View All Overdue Reports →</a>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- ETHICS: Transparency - Help Section          -->
+        <!-- Explains librarian responsibilities          -->
+        <!-- This addresses the Ethics Checklist requirement -->
+        <!-- ============================================= -->
+        <div class="help-section">
+            <h3><i class="fas fa-shield-alt"></i> Librarian Responsibilities</h3>
+            <div class="help-grid">
+                <div class="help-card">
+                    <strong style="color: #34d399;">📚 Managing Books</strong>
+                    <p>Librarians can add, edit, and delete books from the catalog. You can also search and filter books.</p>
+                </div>
+                <div class="help-card">
+                    <strong style="color: #f87171;">👥 Member Management</strong>
+                    <p>Register new members, block/unblock accounts, and manage member information.</p>
+                </div>
+                <div class="help-card">
+                    <strong style="color: #fbbf24;">📊 Overdue Reports</strong>
+                    <p>View all overdue books with member details and calculated fines. You can override fines if needed.</p>
+                </div>
+                <div class="help-card">
+                    <strong style="color: #818cf8;">⚖️ Accountability</strong>
+                    <p>All fines are calculated automatically at $0.50/day. Librarians can review and address member concerns.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeEditProfileModal()">&times;</span>
+            <h3>✏️ Edit Profile</h3>
+            <?php echo $update_msg; ?>
+            <form method="POST">
+                <input type="text" name="full_name" placeholder="Full Name" value="<?php echo htmlspecialchars($name); ?>" required>
+                <input type="tel" name="phone" placeholder="Phone Number" value="<?php echo htmlspecialchars($librarian_phone); ?>" required>
+                <button type="submit" name="update_profile">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>© 2026 LibTech Solutions | Secure Library Management System | Built with <i class="fas fa-heart" style="color:#ec4899;"></i> by DMU Students</p>
+    </div>
+
+    <script>
+        function openEditProfileModal() { document.getElementById('editProfileModal').classList.add('active'); }
+        function closeEditProfileModal() { document.getElementById('editProfileModal').classList.remove('active'); }
+        window.onclick = function(e) { if(e.target.classList.contains('modal')) e.target.classList.remove('active'); }
+    </script>
+</body>
+</html>
