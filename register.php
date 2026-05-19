@@ -1,10 +1,19 @@
 <?php
+/**
+
+ * This page allows new members to create an account.
+ * Passwords are hashed using bcrypt before storing in database.
+ */
+
 session_start();
 require_once 'config.php';
 
 $error = '';
 $success = '';
 
+// =============================================
+// FUNCTIONALITY: ADD & VALIDATE - Process registration form
+// =============================================
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
     $fullname = $_POST['fullname'];
     $email = $_POST['email'];
@@ -12,21 +21,28 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     $password = $_POST['password'];
     $confirm = $_POST['confirm_password'];
     
+    // FUNCTIONALITY: VALIDATE - Check if passwords match
     if($password !== $confirm) {
         $error = "Passwords do not match!";
-    } elseif(strlen($password) < 4) {
+    } 
+    // FUNCTIONALITY: VALIDATE - Check password length
+    elseif(strlen($password) < 4) {
         $error = "Password must be at least 4 characters!";
     } else {
-        // Check if email exists
+        // FUNCTIONALITY: VALIDATE - Check if email already exists
         $check = $conn->query("SELECT * FROM admin WHERE Email = '$email'");
         if($check->num_rows > 0) {
             $error = "Email already exists!";
         } else {
-            // Store password as PLAIN TEXT (to match login system)
-            $plain_password = $password;
+            // =============================================
+            // SECURITY: bcrypt password hashing
+            // This converts plain text password to a secure hash
+            // The hash cannot be reversed back to plain text
+            // =============================================
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             
-            // Insert into admin table
-            $conn->query("INSERT INTO admin (Email, Password_hash, Role, Created_at) VALUES ('$email', '$plain_password', 'Member', NOW())");
+            // Insert into admin table with hashed password
+            $conn->query("INSERT INTO admin (Email, Password_hash, Role, Created_at) VALUES ('$email', '$hashed_password', 'Member', NOW())");
             $admin_id = $conn->insert_id;
             
             // Insert into member table
