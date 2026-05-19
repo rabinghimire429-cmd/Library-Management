@@ -39,6 +39,11 @@ $member_id = $member['member_id'] ?? 0;
 $member_phone = $member['phone'] ?? '';
 $member_email = $member['email'] ?? $admin_email;
 
+// Store member_id in session for notifications
+if($member_id && !isset($_SESSION['member_id'])) {
+    $_SESSION['member_id'] = $member_id;
+}
+
 // Get borrowed books count using prepared statement
 $borrow_stmt = $conn->prepare("SELECT COUNT(*) as count FROM transaction WHERE member_id = ? AND return_date IS NULL");
 $borrow_stmt->bind_param("i", $member_id);
@@ -53,8 +58,9 @@ $fine_stmt->execute();
 $total_fines = $fine_stmt->get_result()->fetch_assoc()['total'] ?? 0;
 $fine_stmt->close();
 
-// Get unread notifications count using prepared statement
-$notif_stmt = $conn->prepare("SELECT COUNT(*) as count FROM notification WHERE member_id = ? AND read_status = 0");
+// Get unread notifications count - UPDATED to work with both status and read_status
+$status_col = getNotificationStatusColumn($conn);
+$notif_stmt = $conn->prepare("SELECT COUNT(*) as count FROM notification WHERE member_id = ? AND $status_col = 1");
 $notif_stmt->bind_param("i", $member_id);
 $notif_stmt->execute();
 $notif_count = $notif_stmt->get_result()->fetch_assoc()['count'];
@@ -303,7 +309,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
                 </div>
                 <div class="help-card">
                     <strong style="color: #818cf8;">🔔 Notifications</strong>
-                    <p>You will receive email notifications for borrow confirmations, due date reminders, and fine payments. Check your notification center for all communications.</p>
+                    <p>You will receive notifications for borrow confirmations, due date reminders, and fine payments. Check your notification center for all communications.</p>
                 </div>
                 <div class="help-card">
                     <strong style="color: #fbbf24;">🔒 Privacy & Security</strong>
