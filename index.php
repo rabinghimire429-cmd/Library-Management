@@ -1,10 +1,5 @@
 <?php
 /**
- * index.php - Login Page / Homepage
- * Author: Rabin Ghimire
- * Module: Authentication & Dashboard
- * 
- * This is the main entry point of the LibTech Solutions system.
  * It displays a professional homepage with features, about, contact sections,
  * and a login modal that pops up when user clicks "Login Now".
  */
@@ -83,6 +78,7 @@ if(isset($_SESSION['admin_id'])) {
         .input-group input:focus { outline: none; border-color: #6366f1; background: rgba(255,255,255,0.12); }
         .login-submit { width: 100%; padding: 14px; background: linear-gradient(135deg, #6366f1, #ec4899); border: none; border-radius: 40px; color: white; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.3s; margin-top: 10px; }
         .login-submit:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(99,102,241,0.4); }
+        .login-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 12px; margin-bottom: 20px; font-size: 13px; color: #f87171; text-align: center; display: none; }
         .modal-footer { padding: 20px 30px 30px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); }
         .modal-footer a { color: #818cf8; text-decoration: none; }
@@ -158,7 +154,7 @@ if(isset($_SESSION['admin_id'])) {
             <div class="modal-body">
                 <div id="ajaxError" class="alert-error" style="display:none;"></div>
                 
-                <!-- SESSION TIMEOUT MESSAGE - Only shows when session expires -->
+                <!-- SESSION TIMEOUT MESSAGE -->
                 <?php if(isset($_GET['timeout'])): ?>
                     <div class="alert-error" style="display:block;">
                         <i class="fas fa-clock"></i> ⏰ Your session has expired due to 30 minutes of inactivity. Please login again.
@@ -171,14 +167,14 @@ if(isset($_SESSION['admin_id'])) {
                 </div>
                 
                 <div id="memberForm" class="login-form active">
-                    <div class="input-group"><label><i class="fas fa-envelope"></i> Email Address</label><input type="email" id="email" placeholder="Enter your email"></div>
-                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="password" placeholder="Enter your password"></div>
+                    <div class="input-group"><label><i class="fas fa-envelope"></i> Email Address</label><input type="email" id="email" placeholder="Enter your email" value="member@test.com"></div>
+                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="password" placeholder="Enter your password" value="1234"></div>
                     <button type="button" class="login-submit" onclick="doLogin()">Login as Member <i class="fas fa-arrow-right"></i></button>
                 </div>
                 
                 <div id="librarianForm" class="login-form">
-                    <div class="input-group"><label><i class="fas fa-envelope"></i> Librarian Email</label><input type="email" id="librarianEmail" placeholder="Enter your email"></div>
-                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="librarianPassword" placeholder="Enter your password"></div>
+                    <div class="input-group"><label><i class="fas fa-envelope"></i> Librarian Email</label><input type="email" id="librarianEmail" placeholder="Enter your email" value="librarian@test.com"></div>
+                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="librarianPassword" placeholder="Enter your password" value="1234"></div>
                     <button type="button" class="login-submit" onclick="doLibrarianLogin()">Login as Librarian <i class="fas fa-arrow-right"></i></button>
                 </div>
             </div>
@@ -276,8 +272,13 @@ if(isset($_SESSION['admin_id'])) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, password: password, role: role })
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(function(response) { 
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(function(data) {
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Member <i class="fas fa-arrow-right"></i>';
                 
@@ -287,10 +288,11 @@ if(isset($_SESSION['admin_id'])) {
                     showError(data.message);
                 }
             })
-            .catch(error => {
+            .catch(function(error) {
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Member <i class="fas fa-arrow-right"></i>';
-                showError('Connection error. Please try again.');
+                console.error('Error details:', error);
+                showError('Connection error: ' + error.message + '. Please check that auth/login-ajax.php exists.');
             });
         }
         
@@ -317,8 +319,13 @@ if(isset($_SESSION['admin_id'])) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, password: password, role: role })
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(function(data) {
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Librarian <i class="fas fa-arrow-right"></i>';
                 
@@ -328,10 +335,11 @@ if(isset($_SESSION['admin_id'])) {
                     showError(data.message);
                 }
             })
-            .catch(error => {
+            .catch(function(error) {
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Librarian <i class="fas fa-arrow-right"></i>';
-                showError('Connection error. Please try again.');
+                console.error('Error details:', error);
+                showError('Connection error: ' + error.message + '. Please check that auth/login-ajax.php exists.');
             });
         }
         
@@ -340,11 +348,13 @@ if(isset($_SESSION['admin_id'])) {
             if(event.target == modal) modal.classList.remove('active'); 
         }
         
-        document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', function(e) { 
-            e.preventDefault(); 
-            var t = document.querySelector(this.getAttribute('href')); 
-            if(t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
-        }));
+        document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+            a.addEventListener('click', function(e) { 
+                e.preventDefault(); 
+                var target = document.querySelector(this.getAttribute('href')); 
+                if(target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+            });
+        });
     </script>
 </body>
 </html>
