@@ -1,94 +1,98 @@
 <?php
 /**
- 
- * Includes user_agent logging for better security tracking
+ * login-ajax.php - AJAX Login Handler
  */
 
 session_start();
-require_once '../config.php';
 
-// Return JSON response for AJAX
+// Enable error reporting for debugging (remove after fixing)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Database connection
+$conn = new mysqli('localhost', 'root', '', 'libtech_db');
+
+// Check connection
+if ($conn->connect_error) {
+    echo json_encode(['success' => false, 'message' => 'Database connection failed: ' . $conn->connect_error]);
+    exit();
+}
+
+// Return JSON response
 header('Content-Type: application/json');
 
-// =============================================
-// SECURITY: Get user IP address and User Agent for audit trail
-// =============================================
-$ip_address = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-$user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-$attempt_time = date('Y-m-d H:i:s');
-
 // Get login data from AJAX request
-$data = json_decode(file_get_contents('php://input'), true);
-$email = $data['email'] ?? '';
-$password = $data['password'] ?? '';
-$selected_role = $data['role'] ?? 'Member';
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
 
-// =============================================
-// SECURITY: Prepared statement to prevent SQL injection
-// =============================================
+// Check if data was received
+if (!$data) {
+    echo json_encode(['success' => false, 'message' => 'No data received. Raw input: ' . $input]);
+    exit();
+}
+
+$email = isset($data['email']) ? trim($data['email']) : '';
+$password = isset($data['password']) ? $data['password'] : '';
+$selected_role = isset($data['role']) ? $data['role'] : 'Member';
+
+// Validate input
+if (empty($email) || empty($password)) {
+    echo json_encode(['success' => false, 'message' => 'Email and password are required']);
+    exit();
+}
+
+// Prepare statement to prevent SQL injection
 $stmt = $conn->prepare("SELECT * FROM admin WHERE Email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
 
-if($result->num_rows == 1) {
+if ($result->num_rows == 1) {
     $admin = $result->fetch_assoc();
     
-    // =============================================
-    // SECURITY: Check if account is locked
-    // =============================================
-    if($admin['locked_until'] !== NULL && strtotime($admin['locked_until']) > time()) {
+    // Check if account is locked
+    if ($admin['locked_until'] !== NULL && strtotime($admin['locked_until']) > time()) {
         $remaining = ceil((strtotime($admin['locked_until']) - time()) / 60);
-        
-        // Log failed attempt due to lockout with user_agent
-        $log_stmt = $conn->prepare("INSERT INTO login_log (email, success, ip_address, attempt_time, reason, user_agent) VALUES (?, 0, ?, ?, 'account_locked', ?)");
-        $log_stmt->bind_param("sssss", $email, $ip_address, $attempt_time, $user_agent);
-        $log_stmt->execute();
-        
         echo json_encode(['success' => false, 'message' => "Account locked. Try again after $remaining minutes."]);
         exit();
     }
     
-    // =============================================
-    // SECURITY: Check if account is active
-    // =============================================
-    if($admin['Is_active'] != 1) {
-        // Log blocked attempt with user_agent
-        $log_stmt = $conn->prepare("INSERT INTO login_log (email, success, ip_address, attempt_time, reason, user_agent) VALUES (?, 0, ?, ?, 'account_blocked', ?)");
-        $log_stmt->bind_param("sssss", $email, $ip_address, $attempt_time, $user_agent);
-        $log_stmt->execute();
-        
+    // Check if account is active
+    if ($admin['Is_active'] != 1) {
         echo json_encode(['success' => false, 'message' => "Account is blocked. Contact librarian."]);
         exit();
     }
     
-    // =============================================
-    // SECURITY: bcrypt password verification
-    // =============================================
-    if(password_verify($password, $admin['Password_hash'])) {
+    // Verify password - supports both bcrypt and plain text
+    $password_valid = false;
+    
+    if (strpos($admin['Password_hash'], '$2y$') === 0) {
+        // Bcrypt hash
+        $password_valid = password_verify($password, $admin['Password_hash']);
+    } else {
+        // Plain text password (for existing test accounts)
+        $password_valid = ($password == $admin['Password_hash']);
+    }
+    
+    if ($password_valid) {
         
-        // =============================================
-        // SECURITY: Role-based access control
-        // =============================================
-        if($selected_role == 'Librarian' && $admin['Role'] != 'Librarian') {
+        // Role validation
+        if ($selected_role == 'Librarian' && $admin['Role'] != 'Librarian') {
             echo json_encode(['success' => false, 'message' => 'This email belongs to a Member. Please select Member Login.']);
             exit();
         }
-        if($selected_role == 'Member' && $admin['Role'] != 'Member') {
+        if ($selected_role == 'Member' && $admin['Role'] != 'Member') {
             echo json_encode(['success' => false, 'message' => 'This email belongs to a Librarian. Please select Librarian Login.']);
             exit();
         }
         
-        // =============================================
-        // SECURITY: Reset failed attempts on successful login
-        // =============================================
+        // Reset failed attempts
         $reset_stmt = $conn->prepare("UPDATE admin SET failed_attempts = 0, locked_until = NULL WHERE User_id = ?");
         $reset_stmt->bind_param("i", $admin['User_id']);
         $reset_stmt->execute();
+        $reset_stmt->close();
         
-        // =============================================
-        // SECURITY: Regenerate session ID to prevent session hijacking
-        // =============================================
+        // Regenerate session ID for security
         session_regenerate_id(true);
         
         // Set session variables
@@ -97,72 +101,40 @@ if($result->num_rows == 1) {
         $_SESSION['admin_role'] = $admin['Role'];
         $_SESSION['LAST_ACTIVITY'] = time();
         
-        // =============================================
-        // SECURITY: Update last login timestamp
-        // =============================================
+        // Update last login
         $update_stmt = $conn->prepare("UPDATE admin SET Last_login = NOW() WHERE User_id = ?");
         $update_stmt->bind_param("i", $admin['User_id']);
         $update_stmt->execute();
-        
-        // =============================================
-        // AUDIT TRAIL: Log successful login with IP and User Agent
-        // =============================================
-        $log_stmt = $conn->prepare("INSERT INTO login_log (email, success, ip_address, attempt_time, reason, user_agent) VALUES (?, 1, ?, ?, 'success', ?)");
-        $log_stmt->bind_param("sssss", $email, $ip_address, $attempt_time, $user_agent);
-        $log_stmt->execute();
+        $update_stmt->close();
         
         echo json_encode(['success' => true, 'role' => $admin['Role']]);
         
     } else {
-        // =============================================
-        // SECURITY: Increment failed attempts counter
-        // =============================================
+        // Invalid password - increment failed attempts
         $failed = $admin['failed_attempts'] + 1;
         
-        if($failed >= 5) {
-            // Lock account for 15 minutes
+        if ($failed >= 5) {
             $lock_time = date('Y-m-d H:i:s', strtotime('+15 minutes'));
             $lock_stmt = $conn->prepare("UPDATE admin SET failed_attempts = ?, locked_until = ? WHERE User_id = ?");
             $lock_stmt->bind_param("isi", $failed, $lock_time, $admin['User_id']);
             $lock_stmt->execute();
-            
-            // Log failed attempt with lockout
-            $log_stmt = $conn->prepare("INSERT INTO login_log (email, success, ip_address, attempt_time, reason, user_agent) VALUES (?, 0, ?, ?, 'locked_out', ?)");
-            $log_stmt->bind_param("sssss", $email, $ip_address, $attempt_time, $user_agent);
-            $log_stmt->execute();
+            $lock_stmt->close();
             
             echo json_encode(['success' => false, 'message' => 'Too many failed attempts. Account locked for 15 minutes.']);
         } else {
             $update_stmt = $conn->prepare("UPDATE admin SET failed_attempts = ? WHERE User_id = ?");
             $update_stmt->bind_param("ii", $failed, $admin['User_id']);
             $update_stmt->execute();
-            
-            // Log failed attempt
-            $log_stmt = $conn->prepare("INSERT INTO login_log (email, success, ip_address, attempt_time, reason, user_agent) VALUES (?, 0, ?, ?, 'invalid_password', ?)");
-            $log_stmt->bind_param("sssss", $email, $ip_address, $attempt_time, $user_agent);
-            $log_stmt->execute();
+            $update_stmt->close();
             
             $remaining = 5 - $failed;
             echo json_encode(['success' => false, 'message' => "Invalid password. $remaining attempt(s) remaining."]);
         }
     }
 } else {
-    // =============================================
-    // SECURITY: User not found - generic message to prevent email harvesting
-    // =============================================
-    
-    // Log failed attempt (email not found)
-    $log_stmt = $conn->prepare("INSERT INTO login_log (email, success, ip_address, attempt_time, reason, user_agent) VALUES (?, 0, ?, ?, 'user_not_found', ?)");
-    $log_stmt->bind_param("sssss", $email, $ip_address, $attempt_time, $user_agent);
-    $log_stmt->execute();
-    
     echo json_encode(['success' => false, 'message' => 'Invalid email or password.']);
 }
 
-// Close statements
-if(isset($stmt)) $stmt->close();
-if(isset($log_stmt)) $log_stmt->close();
-if(isset($update_stmt)) $update_stmt->close();
-if(isset($reset_stmt)) $reset_stmt->close();
-if(isset($lock_stmt)) $lock_stmt->close();
+$stmt->close();
+$conn->close();
 ?>
