@@ -1,14 +1,9 @@
 <?php
 /**
- * Member Dashboard - Secure Version
+ * Member Dashboard - Fixed Version
  */
 
 session_start();
-
-// CSRF Protection
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
 
 if(!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
@@ -20,14 +15,14 @@ require_once 'config.php';
 $admin_id = $_SESSION['admin_id'];
 $admin_email = $_SESSION['admin_email'];
 
-// Get member details using prepared statement
+// Get member details
 $stmt = $conn->prepare("SELECT * FROM member WHERE admin_id = ?");
 $stmt->bind_param("i", $admin_id);
 $stmt->execute();
-$member_query = $stmt->get_result();
-$member = $member_query->fetch_assoc();
+$member = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
+// Fix name display
 if($member && !empty($member['full_name']) && $member['full_name'] != $member['email']) {
     $name = $member['full_name'];
 } else {
@@ -39,37 +34,37 @@ $member_id = $member['member_id'] ?? 0;
 $member_phone = $member['phone'] ?? '';
 $member_email = $member['email'] ?? $admin_email;
 
-// Store member_id in session for notifications
-if($member_id && !isset($_SESSION['member_id'])) {
-    $_SESSION['member_id'] = $member_id;
-}
-
-// Get borrowed books count using prepared statement
+// Get borrowed books count
 $borrow_stmt = $conn->prepare("SELECT COUNT(*) as count FROM transaction WHERE member_id = ? AND return_date IS NULL");
 $borrow_stmt->bind_param("i", $member_id);
 $borrow_stmt->execute();
 $borrowed_count = $borrow_stmt->get_result()->fetch_assoc()['count'];
 $borrow_stmt->close();
 
-// Get total fines using prepared statement
+// Get total fines
 $fine_stmt = $conn->prepare("SELECT SUM(fine_amount) as total FROM transaction WHERE member_id = ? AND fine_paid = 0");
 $fine_stmt->bind_param("i", $member_id);
 $fine_stmt->execute();
 $total_fines = $fine_stmt->get_result()->fetch_assoc()['total'] ?? 0;
 $fine_stmt->close();
 
-// Get unread notifications count - UPDATED to work with both status and read_status
-$status_col = getNotificationStatusColumn($conn);
-$notif_stmt = $conn->prepare("SELECT COUNT(*) as count FROM notification WHERE member_id = ? AND $status_col = 1");
-$notif_stmt->bind_param("i", $member_id);
-$notif_stmt->execute();
-$notif_count = $notif_stmt->get_result()->fetch_assoc()['count'];
-$notif_stmt->close();
+// Get unread notifications count - FIXED: removed undefined function
+$notif_count = 0;
+if($member_id > 0) {
+    $notif_stmt = $conn->prepare("SELECT COUNT(*) as count FROM notification WHERE member_id = ? AND (read_status = 0 OR read_status IS NULL)");
+    $notif_stmt->bind_param("i", $member_id);
+    $notif_stmt->execute();
+    $notif_result = $notif_stmt->get_result();
+    if($notif_result) {
+        $notif_count = $notif_result->fetch_assoc()['count'];
+    }
+    $notif_stmt->close();
+}
 
 // Update profile
 $update_msg = '';
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
-    // Verify CSRF token
+    // CSRF Protection
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
         $update_msg = "<div class='success-msg' style='background:rgba(239,68,68,0.2); color:#f87171;'>❌ Security validation failed!</div>";
     } else {
@@ -301,19 +296,19 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             <div class="help-grid">
                 <div class="help-card">
                     <strong style="color: #34d399;">📖 Borrowing Books</strong>
-                    <p>Members can borrow books for 14 days. The due date is automatically calculated from the borrow date. You can view your borrowed books and due dates on this dashboard.</p>
+                    <p>Members can borrow books for 14 days. The due date is automatically calculated from the borrow date.</p>
                 </div>
                 <div class="help-card">
                     <strong style="color: #f87171;">💰 Fine Calculation</strong>
-                    <p>Late returns incur a fine of <strong>$0.50 per day</strong>. The fine is calculated automatically based on the due date. All members are charged the same rate - no exceptions.</p>
+                    <p>Late returns incur a fine of <strong>$0.50 per day</strong>. Calculated automatically based on due date.</p>
                 </div>
                 <div class="help-card">
                     <strong style="color: #818cf8;">🔔 Notifications</strong>
-                    <p>You will receive notifications for borrow confirmations, due date reminders, and fine payments. Check your notification center for all communications.</p>
+                    <p>You will receive notifications for borrow confirmations, due date reminders, and fine payments.</p>
                 </div>
                 <div class="help-card">
                     <strong style="color: #fbbf24;">🔒 Privacy & Security</strong>
-                    <p>Your personal information is only used for library operations. Passwords are encrypted using bcrypt. Sessions automatically expire after 30 minutes of inactivity for your security.</p>
+                    <p>Your personal information is only used for library operations. Passwords are encrypted using bcrypt.</p>
                 </div>
             </div>
             <div class="help-footer">
@@ -337,7 +332,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     </div>
 
     <div class="footer">
-        <p>© 2026 LibTech Solutions | Secure Library Management System | Built with <i class="fas fa-heart" style="color:#ec4899;"></i> by DMU Students</p>
+        <p>© 2026 LibTech Solutions | Secure Library Management System</p>
     </div>
 
     <script>
@@ -345,17 +340,25 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         function closeEditProfileModal() { document.getElementById('editProfileModal').classList.remove('active'); }
         window.onclick = function(e) { if(e.target.classList.contains('modal')) e.target.classList.remove('active'); }
         
-        fetch('api/get-borrowed-books.php').then(r=>r.json()).then(data=>{
-            const list = document.getElementById('bookList');
-            if(data.success && data.books.length > 0) {
-                let html = '';
-                data.books.forEach(book => {
-                    const isOverdue = book.status === 'Overdue';
-                    html += `<div class="book-item"><div><div class="book-title">${book.title}</div><div class="due-date">by ${book.author}</div></div><div><div class="due-date">Borrowed: ${book.borrow_date}</div><div class="due-date ${isOverdue ? 'overdue' : ''}">Due: ${book.due_date}</div>${isOverdue ? `<div class="overdue">⚠️ Overdue by ${book.days_overdue} days</div>` : ''}${book.fine_amount > 0 ? `<div class="overdue">Fine: $${parseFloat(book.fine_amount).toFixed(2)}</div>` : ''}</div></div>`;
-                });
-                list.innerHTML = html;
-            } else { list.innerHTML = '<p style="text-align:center; padding:20px;">📭 You have no borrowed books.</p>'; }
-        }).catch(()=>{ document.getElementById('bookList').innerHTML = '<p style="text-align:center; padding:20px;">❌ Error loading borrowed books.</p>'; });
+        fetch('api/get-borrowed-books.php')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var list = document.getElementById('bookList');
+                if(data.success && data.books.length > 0) {
+                    var html = '';
+                    for(var i = 0; i < data.books.length; i++) {
+                        var book = data.books[i];
+                        var isOverdue = book.status === 'Overdue';
+                        html += '<div class="book-item"><div><div class="book-title">' + book.title + '</div><div class="due-date">by ' + book.author + '</div></div><div><div class="due-date">Borrowed: ' + book.borrow_date + '</div><div class="due-date ' + (isOverdue ? 'overdue' : '') + '">Due: ' + book.due_date + '</div>' + (isOverdue ? '<div class="overdue">⚠️ Overdue by ' + book.days_overdue + ' days</div>' : '') + (book.fine_amount > 0 ? '<div class="overdue">Fine: $' + parseFloat(book.fine_amount).toFixed(2) + '</div>' : '') + '</div></div>';
+                    }
+                    list.innerHTML = html;
+                } else { 
+                    list.innerHTML = '<p style="text-align:center; padding:20px;">📭 You have no borrowed books.</p>'; 
+                }
+            })
+            .catch(function() { 
+                document.getElementById('bookList').innerHTML = '<p style="text-align:center; padding:20px;">❌ Error loading borrowed books.</p>'; 
+            });
     </script>
 </body>
 </html>
