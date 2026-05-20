@@ -1,24 +1,35 @@
 <?php
-
-// Start session
 session_start();
-
-// Check admin login
-if(!isset($_SESSION['admin_id'])) {
+if(!isset($_SESSION['admin_id']) || $_SESSION['admin_role'] !== 'Librarian') {
     header('Location: ../index.php');
     exit();
 }
 
-// Database connection
-$conn = new mysqli('localhost', 'root', '', 'libtech_db');
+require_once '../config.php';
 
-// Get book id
-$id = $_GET['id'];
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Delete book from database
-$conn->query("DELETE FROM book WHERE book_id = $id");
+if($id > 0) {
+    // Get book title before deleting for audit log
+    $stmt = $conn->prepare("SELECT title FROM book WHERE book_id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $book = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    
+    if($book) {
+        // Delete using prepared statement
+        $delete_stmt = $conn->prepare("DELETE FROM book WHERE book_id = ?");
+        $delete_stmt->bind_param("i", $id);
+        $delete_stmt->execute();
+        $delete_stmt->close();
+        
+        // Log the action
+        logAdminAction($conn, $_SESSION['admin_id'], 'DELETE_BOOK', "Deleted book ID $id: " . $book['title']);
+    }
+}
 
-// Redirect back to search page
-header('Location: search-books.php');
+// Redirect back
+header('Location: search-books.php?msg=deleted');
 exit();
 ?>
