@@ -1,12 +1,9 @@
 <?php
-/**
- * index.php - Login Page / Homepage with 2FA Support
- * Author: Rabin Ghimire
- * Module: Authentication & Dashboard
- * 
+/* 
  * This is the main entry point of the LibTech Solutions system.
  * It displays a professional homepage with features, about, contact sections,
- * and a login modal that supports Two-Factor Authentication (2FA).
+ * and a login modal for Member and Librarian login.
+ *
  */
 
 // Include database configuration and session settings
@@ -38,10 +35,14 @@ if(isset($_SESSION['admin_id'])) {
            PRESENTATION LAYER - CSS STYLES
            Modern glassmorphism design for landing page
         ============================================= */
+        
+        /* Reset default margins and box sizing */
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* Body styling with gradient background */
         body { font-family: 'Inter', sans-serif; background: #0a0a2a; color: white; overflow-x: hidden; }
         
-        /* Animated Background Elements */
+        /* Animated Background Elements - Floating orbs for visual effect */
         .bg-animation { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
         .bg-animation .gradient { position: absolute; width: 100%; height: 100%; background: radial-gradient(circle at 20% 50%, rgba(99,102,241,0.3), transparent 50%), radial-gradient(circle at 80% 80%, rgba(236,72,153,0.3), transparent 50%); }
         .bg-animation .orb { position: absolute; border-radius: 50%; filter: blur(60px); animation: float 20s infinite; }
@@ -50,7 +51,7 @@ if(isset($_SESSION['admin_id'])) {
         .orb-3 { width: 300px; height: 300px; background: #06b6d4; top: 40%; left: 70%; opacity: 0.15; animation-delay: 10s; }
         @keyframes float { 0%,100% { transform: translate(0,0); } 33% { transform: translate(30px,-30px); } 66% { transform: translate(-20px,20px); } }
         
-        /* Navigation Bar */
+        /* Navigation Bar - Fixed at top with blur effect */
         .navbar { position: fixed; top: 0; left: 0; right: 0; background: rgba(10,10,42,0.9); backdrop-filter: blur(12px); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .logo { display: flex; align-items: center; gap: 15px; }
         .logo-img { height: 45px; width: auto; border-radius: 10px; }
@@ -59,7 +60,7 @@ if(isset($_SESSION['admin_id'])) {
         .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-weight: 500; transition: all 0.3s; font-size: 14px; }
         .nav-links a:hover { color: #818cf8; }
         
-        /* Hero Section */
+        /* Hero Section - Main landing content */
         .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 120px 40px 80px; }
         .hero-content { max-width: 900px; }
         .hero-badge { display: inline-block; background: rgba(99,102,241,0.2); padding: 8px 20px; border-radius: 40px; font-size: 14px; margin-bottom: 30px; border: 1px solid rgba(99,102,241,0.3); }
@@ -74,7 +75,7 @@ if(isset($_SESSION['admin_id'])) {
         .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 14px 32px; border-radius: 40px; color: white; text-decoration: none; font-weight: 600; transition: all 0.3s; }
         .btn-secondary:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
         
-        /* Login Modal - Popup Window */
+        /* Login Modal - Popup Window (hidden by default, shown via JavaScript) */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: rgba(20,20,50,0.98); backdrop-filter: blur(12px); border-radius: 30px; width: 480px; max-width: 90%; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
@@ -82,13 +83,14 @@ if(isset($_SESSION['admin_id'])) {
         .modal-header h2 { font-size: 28px; background: linear-gradient(135deg, #818cf8, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .modal-body { padding: 25px 30px; }
         
-        /* Role Selector - Member vs Librarian Toggle */
+        /* Role Selector - Toggle between Member and Librarian login forms */
         .role-selector { display: flex; gap: 15px; margin-bottom: 25px; }
         .role-btn { flex: 1; padding: 14px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.1); border-radius: 50px; color: white; font-weight: 600; cursor: pointer; transition: all 0.3s; text-align: center; }
         .role-btn.active { background: linear-gradient(135deg, #6366f1, #ec4899); border-color: transparent; }
         .role-btn:hover { background: rgba(99,102,241,0.5); }
         
-        /* Login Forms */
+        /* Login Forms - Input fields with glassmorphism effect */
+        /* NOTE: NO hardcoded values - users must type their credentials */
         .login-form { display: none; }
         .login-form.active { display: block; }
         .input-group { margin-bottom: 20px; }
@@ -109,7 +111,7 @@ if(isset($_SESSION['admin_id'])) {
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: rgba(255,255,255,0.5); transition: all 0.3s; }
         .close-modal:hover { color: white; }
         
-        /* Features Section */
+        /* Features Section - Grid of feature cards */
         .features-section { padding: 100px 40px; background: rgba(0,0,0,0.3); }
         .section-title { text-align: center; font-size: 42px; font-weight: 700; margin-bottom: 20px; }
         .section-subtitle { text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 60px; font-size: 18px; }
@@ -120,7 +122,7 @@ if(isset($_SESSION['admin_id'])) {
         .feature-card h3 { font-size: 22px; margin-bottom: 15px; }
         .feature-card p { color: rgba(255,255,255,0.6); line-height: 1.6; }
         
-        /* About Section */
+        /* About Section - Team and statistics */
         .about-section { padding: 100px 40px; display: flex; flex-wrap: wrap; gap: 50px; max-width: 1200px; margin: 0 auto; align-items: center; }
         .about-content { flex: 1; }
         .about-content h2 { font-size: 36px; margin-bottom: 20px; }
@@ -131,7 +133,7 @@ if(isset($_SESSION['admin_id'])) {
         .stat-box { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; text-align: center; }
         .stat-number { font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #818cf8, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        /* Contact Section */
+        /* Contact Section - Contact information */
         .contact-section { padding: 100px 40px; background: rgba(0,0,0,0.2); }
         .contact-container { display: flex; flex-wrap: wrap; gap: 50px; max-width: 1200px; margin: 0 auto; }
         .contact-info { flex: 1; }
@@ -148,7 +150,7 @@ if(isset($_SESSION['admin_id'])) {
         .social-links a { color: rgba(255,255,255,0.5); font-size: 20px; transition: all 0.3s; }
         .social-links a:hover { color: #818cf8; }
         
-        /* Responsive Design */
+        /* Responsive Design - Mobile friendly */
         @media (max-width: 768px) { 
             .navbar { flex-direction: column; gap: 15px; padding: 15px 20px; } 
             .hero h1 { font-size: 36px; } 
@@ -158,7 +160,7 @@ if(isset($_SESSION['admin_id'])) {
     </style>
 </head>
 <body>
-    <!-- Animated Background Elements -->
+    <!-- Animated Background Elements for visual appeal -->
     <div class="bg-animation">
         <div class="gradient"></div>
         <div class="orb orb-1"></div>
@@ -194,57 +196,75 @@ if(isset($_SESSION['admin_id'])) {
     </section>
     
     <!-- ============================================= -->
-    <!-- LOGIN MODAL POPUP - SUPPORTS 2FA             -->
+    <!-- LOGIN MODAL POPUP                             -->
+    <!-- - NO HARDCODED CREDENTIALS (empty fields)    -->
+    <!-- - Users must type their own email/password   -->
+    <!-- - Enter key support enabled on all fields    -->
+    <!-- - Auto-focus on email when modal opens       -->
     <!-- ============================================= -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
+            <!-- Close button (X) -->
             <div class="close-modal" onclick="closeLoginModal()">&times;</div>
+            
+            <!-- Modal Header -->
             <div class="modal-header">
                 <h2><i class="fas fa-sign-in-alt"></i> Welcome Back</h2>
             </div>
+            
             <div class="modal-body">
-                <!-- Error Message Display Area -->
+                <!-- Error Message Display Area (shown when login fails) -->
                 <div id="ajaxError" class="alert-error"></div>
                 
-                <!-- Session Timeout Message -->
+                <!-- Session Timeout Message (shown after 30 mins inactivity) -->
                 <?php if(isset($_GET['timeout'])): ?>
                     <div class="alert-error" style="display:block;">
                         <i class="fas fa-clock"></i> ⏰ Session expired due to 30 minutes of inactivity. Please login again.
                     </div>
                 <?php endif; ?>
                 
-                <!-- Role Selector - Member vs Librarian -->
+                <!-- Role Selector - Toggle between Member and Librarian -->
                 <div class="role-selector">
                     <div class="role-btn active" onclick="selectRole('member')">👤 Member Login</div>
                     <div class="role-btn" onclick="selectRole('librarian')">📚 Librarian Login</div>
                 </div>
                 
-                <!-- Member Login Form -->
+                <!-- ============================================= -->
+                <!-- MEMBER LOGIN FORM                             -->
+                <!-- NOTE: NO hardcoded values!                    -->
+                <!-- Enter key works on both email AND password    -->
+                <!-- ============================================= -->
                 <div id="memberForm" class="login-form active">
                     <div class="input-group">
                         <label><i class="fas fa-envelope"></i> Email Address</label>
-                        <input type="email" id="memberEmail" placeholder="Enter your email" value="member@test.com">
+                        <input type="email" id="memberEmail" placeholder="Enter your email" autocomplete="off">
                     </div>
                     <div class="input-group">
                         <label><i class="fas fa-lock"></i> Password</label>
-                        <input type="password" id="memberPassword" placeholder="Enter your password" value="1234">
+                        <input type="password" id="memberPassword" placeholder="Enter your password" autocomplete="off">
                     </div>
                     <button type="button" class="login-submit" onclick="doMemberLogin()">Login as Member <i class="fas fa-arrow-right"></i></button>
                 </div>
                 
-                <!-- Librarian Login Form -->
+                <!-- ============================================= -->
+                <!-- LIBRARIAN LOGIN FORM                           -->
+                <!-- NOTE: NO hardcoded values!                    -->
+                <!-- Enter key works on both email AND password    -->
+                <!-- ============================================= -->
                 <div id="librarianForm" class="login-form">
                     <div class="input-group">
                         <label><i class="fas fa-envelope"></i> Librarian Email</label>
-                        <input type="email" id="librarianEmail" placeholder="Enter your email" value="librarian@test.com">
+                        <input type="email" id="librarianEmail" placeholder="Enter your email" autocomplete="off">
                     </div>
                     <div class="input-group">
                         <label><i class="fas fa-lock"></i> Password</label>
-                        <input type="password" id="librarianPassword" placeholder="Enter your password" value="1234">
+                        <input type="password" id="librarianPassword" placeholder="Enter your password" autocomplete="off">
                     </div>
                     <button type="button" class="login-submit" onclick="doLibrarianLogin()">Login as Librarian <i class="fas fa-arrow-right"></i></button>
                 </div>
             </div>
+            
+            <!-- Modal Footer with Registration Link -->
             <div class="modal-footer">
                 <p>New to LibTech Solutions? <a href="register.php">Register Here <i class="fas fa-user-plus"></i></a></p>
             </div>
@@ -315,40 +335,91 @@ if(isset($_SESSION['admin_id'])) {
         </div>
         <p>© 2026 LibTech Solutions | Built with <i class="fas fa-heart" style="color:#ec4899;"></i> by De Montfort University Students</p>
     </footer>
+    
+    <!-- ============================================= -->
+    <!-- JAVASCRIPT - CLIENT-SIDE LOGIC               -->
+    /* Handles:                                        */
+    /* - Modal open/close                             */
+    /* - Login AJAX requests                          */
+    /* - 2FA redirect handling                        */
+    /* - ENTER KEY SUPPORT on all input fields        */
+    /* - Auto-focus management                        */
+    /* - Role switching (Member/Librarian)            */
+    /* - Error message display                        */
+    /* NOTE: No hardcoded credentials in JavaScript   */
+    /* NOTE: Enter key works on all fields            */
+    <!-- ============================================= -->
     <script>
+        // =============================================
         // FUNCTION: Open login modal popup
+        // - Shows the modal
+        // - Clears any previous error messages
+        // - Clears any pre-filled values
+        // - Sets focus to email field for better UX
+        // =============================================
         function openLoginModal() {
             document.getElementById('loginModal').classList.add('active');
             document.getElementById('ajaxError').style.display = 'none';
             document.getElementById('ajaxError').innerHTML = '';
+            
+            // Clear any previously entered values when opening modal
+            document.getElementById('memberEmail').value = '';
+            document.getElementById('memberPassword').value = '';
+            document.getElementById('librarianEmail').value = '';
+            document.getElementById('librarianPassword').value = '';
+            
+            // Set focus to email field for better user experience
+            setTimeout(function() {
+                document.getElementById('memberEmail').focus();
+            }, 100);
         }
         
+        // =============================================
         // FUNCTION: Close login modal popup
+        // =============================================
         function closeLoginModal() {
             document.getElementById('loginModal').classList.remove('active');
         }
         
+        // =============================================
         // FUNCTION: Switch between Member and Librarian login forms
+        // - Updates active class on forms
+        // - Updates active class on role buttons
+        // - Moves focus to the email field of selected role
+        // =============================================
         function selectRole(role) {
             var memberForm = document.getElementById('memberForm');
             var librarianForm = document.getElementById('librarianForm');
             var btns = document.querySelectorAll('.role-btn');
             
             if(role === 'member') {
+                // Show member form, hide librarian form
                 memberForm.classList.add('active');
                 librarianForm.classList.remove('active');
                 btns[0].classList.add('active');
                 btns[1].classList.remove('active');
+                // Focus on member email field
+                setTimeout(function() {
+                    document.getElementById('memberEmail').focus();
+                }, 100);
             } else {
+                // Show librarian form, hide member form
                 memberForm.classList.remove('active');
                 librarianForm.classList.add('active');
                 btns[0].classList.remove('active');
                 btns[1].classList.add('active');
+                // Focus on librarian email field
+                setTimeout(function() {
+                    document.getElementById('librarianEmail').focus();
+                }, 100);
             }
+            // Clear any previous error messages
             document.getElementById('ajaxError').style.display = 'none';
         }
         
+        // =============================================
         // FUNCTION: Display error message to user
+        // =============================================
         function showError(message) {
             var errorDiv = document.getElementById('ajaxError');
             errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + message;
@@ -357,15 +428,18 @@ if(isset($_SESSION['admin_id'])) {
         
         // =============================================
         // FUNCTIONALITY: MEMBER LOGIN
-        // Sends AJAX request to auth/login-ajax.php
-        // Handles 2FA redirect if required
+        // - Validates email and password are not empty
+        // - Sends AJAX POST request to auth/login-ajax.php
+        // - Handles success (redirect to member dashboard)
+        // - Handles 2FA requirement (redirect to 2fa-verify.php)
+        // - Handles errors (display error message)
         // =============================================
         function doMemberLogin() {
             var email = document.getElementById('memberEmail').value;
             var password = document.getElementById('memberPassword').value;
             var btn = event.target;
             
-            // Client-side validation
+            // Client-side validation - prevent empty submissions
             if(email === "") {
                 showError("Please enter your email address");
                 return;
@@ -393,6 +467,7 @@ if(isset($_SESSION['admin_id'])) {
                 return response.json();
             })
             .then(function(data) {
+                // Re-enable button and restore original text
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Member <i class="fas fa-arrow-right"></i>';
                 
@@ -408,6 +483,7 @@ if(isset($_SESSION['admin_id'])) {
                 }
             })
             .catch(function(error) {
+                // Network or server error
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Member <i class="fas fa-arrow-right"></i>';
                 console.error('Fetch error:', error);
@@ -417,8 +493,11 @@ if(isset($_SESSION['admin_id'])) {
         
         // =============================================
         // FUNCTIONALITY: LIBRARIAN LOGIN
-        // Sends AJAX request to auth/login-ajax.php
-        // Handles 2FA redirect if required
+        // - Validates email and password are not empty
+        // - Sends AJAX POST request to auth/login-ajax.php
+        // - Handles success (redirect to librarian dashboard)
+        // - Handles 2FA requirement (redirect to 2fa-verify.php)
+        // - Handles errors (display error message)
         // =============================================
         function doLibrarianLogin() {
             var email = document.getElementById('librarianEmail').value;
@@ -453,6 +532,7 @@ if(isset($_SESSION['admin_id'])) {
                 return response.json();
             })
             .then(function(data) {
+                // Re-enable button
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Librarian <i class="fas fa-arrow-right"></i>';
                 
@@ -468,6 +548,7 @@ if(isset($_SESSION['admin_id'])) {
                 }
             })
             .catch(function(error) {
+                // Network or server error
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Librarian <i class="fas fa-arrow-right"></i>';
                 console.error('Fetch error:', error);
@@ -475,18 +556,74 @@ if(isset($_SESSION['admin_id'])) {
             });
         }
         
+        // =============================================
+        // FUNCTIONALITY: ENTER KEY SUPPORT
+        // Allows users to press "Enter" key to login instead of clicking button
+        // This significantly improves user experience
+        // 
+        // How it works:
+        // - Listens for 'keypress' event on email and password fields
+        // - When Enter key is detected (event.key === 'Enter')
+        // - Prevents default form submission behavior
+        // - Calls the appropriate login function
+        // =============================================
+        
+        // Add Enter key listener for Member Login email field
+        document.getElementById('memberEmail').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();  // Prevent any default form submission
+                doMemberLogin();         // Trigger member login
+            }
+        });
+        
+        // Add Enter key listener for Member Login password field
+        document.getElementById('memberPassword').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();  // Prevent any default form submission
+                doMemberLogin();         // Trigger member login
+            }
+        });
+        
+        // Add Enter key listener for Librarian Login email field
+        document.getElementById('librarianEmail').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();  // Prevent any default form submission
+                doLibrarianLogin();      // Trigger librarian login
+            }
+        });
+        
+        // Add Enter key listener for Librarian Login password field
+        document.getElementById('librarianPassword').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();  // Prevent any default form submission
+                doLibrarianLogin();      // Trigger librarian login
+            }
+        });
+        
+        // =============================================
         // FUNCTION: Close modal when clicking outside
+        // If user clicks on the modal background (not the content),
+        // the modal will close
+        // =============================================
         window.onclick = function(event) { 
             var modal = document.getElementById('loginModal'); 
-            if(event.target == modal) modal.classList.remove('active'); 
+            if(event.target == modal) {
+                modal.classList.remove('active'); 
+            }
         }
         
+        // =============================================
         // FUNCTION: Smooth scroll for anchor links
+        // When user clicks on #home, #features, #about, #contact
+        // The page scrolls smoothly to that section
+        // =============================================
         document.querySelectorAll('a[href^="#"]').forEach(function(a) {
             a.addEventListener('click', function(e) { 
                 e.preventDefault(); 
                 var target = document.querySelector(this.getAttribute('href')); 
-                if(target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+                if(target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+                }
             });
         });
     </script>
