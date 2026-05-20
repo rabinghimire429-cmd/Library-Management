@@ -217,7 +217,7 @@ $demo_code = $_SESSION['2fa_code'] ?? '';
         
         <div class="demo-note">
             <i class="fas fa-info-circle"></i> 
-            <strong>Demo Mode:</strong> For testing, open browser console (F12) to see the verification code.
+            <strong>Demo Mode:</strong> Open browser console to see the verification code.
         </div>
     </div>
     
