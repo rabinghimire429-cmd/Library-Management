@@ -1,21 +1,18 @@
 <?php
 /**
- * It displays a professional homepage with features, about, contact sections,
- * and a login modal that pops up when user clicks "Login Now".
+ * index.php - Login Page / Homepage
  */
 
-// Include database configuration and session settings
 require_once 'config.php';
 
-// FUNCTIONALITY: LOGIN SESSION CHECK
-// If user is already logged in, redirect to appropriate dashboard
+// If already logged in, redirect to appropriate dashboard
 if(isset($_SESSION['admin_id'])) {
     if($_SESSION['admin_role'] == 'Librarian') {
         header('Location: librarian-dashboard.php');
     } else {
         header('Location: member-dashboard.php');
     }
-    exit(); // Stop further execution
+    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -37,7 +34,6 @@ if(isset($_SESSION['admin_id'])) {
         .orb-3 { width: 300px; height: 300px; background: #06b6d4; top: 40%; left: 70%; opacity: 0.15; animation-delay: 10s; }
         @keyframes float { 0%,100% { transform: translate(0,0); } 33% { transform: translate(30px,-30px); } 66% { transform: translate(-20px,20px); } }
         
-        /* Navbar with Logo */
         .navbar { position: fixed; top: 0; left: 0; right: 0; background: rgba(10,10,42,0.9); backdrop-filter: blur(12px); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .logo { display: flex; align-items: center; gap: 15px; }
         .logo-img { height: 45px; width: auto; border-radius: 10px; }
@@ -58,7 +54,6 @@ if(isset($_SESSION['admin_id'])) {
         .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 14px 32px; border-radius: 40px; color: white; text-decoration: none; font-weight: 600; transition: all 0.3s; }
         .btn-secondary:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
         
-        /* Login Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: rgba(20,20,50,0.98); backdrop-filter: blur(12px); border-radius: 30px; width: 480px; max-width: 90%; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
@@ -78,7 +73,7 @@ if(isset($_SESSION['admin_id'])) {
         .input-group input:focus { outline: none; border-color: #6366f1; background: rgba(255,255,255,0.12); }
         .login-submit { width: 100%; padding: 14px; background: linear-gradient(135deg, #6366f1, #ec4899); border: none; border-radius: 40px; color: white; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.3s; margin-top: 10px; }
         .login-submit:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(99,102,241,0.4); }
-        .login-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .login-submit:disabled { opacity: 0.6; cursor: not-allowed; }
         .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 12px; margin-bottom: 20px; font-size: 13px; color: #f87171; text-align: center; display: none; }
         .modal-footer { padding: 20px 30px 30px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); }
         .modal-footer a { color: #818cf8; text-decoration: none; }
@@ -124,10 +119,8 @@ if(isset($_SESSION['admin_id'])) {
     </style>
 </head>
 <body>
-    <!-- Animated Background Elements -->
     <div class="bg-animation"><div class="gradient"></div><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
     
-    <!-- Navigation Bar with Logo -->
     <nav class="navbar">
         <div class="logo">
             <img src="logo.jpg" alt="LibTech Solutions Logo" class="logo-img" onerror="this.style.display='none'">
@@ -136,7 +129,6 @@ if(isset($_SESSION['admin_id'])) {
         <div class="nav-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#about">About</a><a href="#contact">Contact</a></div>
     </nav>
     
-    <!-- Hero Section with Login Button -->
     <section id="home" class="hero">
         <div class="hero-content">
             <div class="hero-badge"><i class="fas fa-rocket"></i> Next-Gen Library Management</div>
@@ -146,19 +138,15 @@ if(isset($_SESSION['admin_id'])) {
         </div>
     </section>
     
-    <!-- Login Modal Popup -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <div class="close-modal" onclick="closeLoginModal()">&times;</div>
             <div class="modal-header"><h2><i class="fas fa-sign-in-alt"></i> Welcome Back</h2></div>
             <div class="modal-body">
-                <div id="ajaxError" class="alert-error" style="display:none;"></div>
+                <div id="ajaxError" class="alert-error"></div>
                 
-                <!-- SESSION TIMEOUT MESSAGE -->
                 <?php if(isset($_GET['timeout'])): ?>
-                    <div class="alert-error" style="display:block;">
-                        <i class="fas fa-clock"></i> ⏰ Your session has expired due to 30 minutes of inactivity. Please login again.
-                    </div>
+                    <div class="alert-error" style="display:block;">⏰ Session expired. Please login again.</div>
                 <?php endif; ?>
                 
                 <div class="role-selector">
@@ -167,14 +155,14 @@ if(isset($_SESSION['admin_id'])) {
                 </div>
                 
                 <div id="memberForm" class="login-form active">
-                    <div class="input-group"><label><i class="fas fa-envelope"></i> Email Address</label><input type="email" id="email" placeholder="Enter your email" value="member@test.com"></div>
-                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="password" placeholder="Enter your password" value="1234"></div>
-                    <button type="button" class="login-submit" onclick="doLogin()">Login as Member <i class="fas fa-arrow-right"></i></button>
+                    <div class="input-group"><label><i class="fas fa-envelope"></i> Email Address</label><input type="email" id="memberEmail" placeholder="Enter your email"></div>
+                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="memberPassword" placeholder="Enter your password"></div>
+                    <button type="button" class="login-submit" onclick="doMemberLogin()">Login as Member <i class="fas fa-arrow-right"></i></button>
                 </div>
                 
                 <div id="librarianForm" class="login-form">
-                    <div class="input-group"><label><i class="fas fa-envelope"></i> Librarian Email</label><input type="email" id="librarianEmail" placeholder="Enter your email" value="librarian@test.com"></div>
-                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="librarianPassword" placeholder="Enter your password" value="1234"></div>
+                    <div class="input-group"><label><i class="fas fa-envelope"></i> Librarian Email</label><input type="email" id="librarianEmail" placeholder="Enter your email"></div>
+                    <div class="input-group"><label><i class="fas fa-lock"></i> Password</label><input type="password" id="librarianPassword" placeholder="Enter your password"></div>
                     <button type="button" class="login-submit" onclick="doLibrarianLogin()">Login as Librarian <i class="fas fa-arrow-right"></i></button>
                 </div>
             </div>
@@ -184,7 +172,6 @@ if(isset($_SESSION['admin_id'])) {
         </div>
     </div>
     
-    <!-- Features Section -->
     <section id="features" class="features-section">
         <h2 class="section-title">Powerful <span class="hero-gradient">Features</span></h2>
         <p class="section-subtitle">Everything you need to manage a modern library efficiently</p>
@@ -198,13 +185,11 @@ if(isset($_SESSION['admin_id'])) {
         </div>
     </section>
     
-    <!-- About Section -->
     <section id="about" class="about-section">
         <div class="about-content"><h2>About <span class="hero-gradient">LibTech Solutions</span></h2><p>LibTech Solutions is a comprehensive web-based library management system designed to streamline library operations. Our system allows librarians to manage books, members, and borrowing activities efficiently while providing members with an easy way to search, borrow, and return books online.</p><p>The system automatically calculates fines at $0.50 per day for overdue returns and sends email notifications for borrow confirmations, return receipts, and overdue reminders.</p><div class="team-badge"><span><i class="fas fa-user-graduate"></i> Student Project</span><span><i class="fas fa-users"></i> Team of 5 Developers</span><span><i class="fas fa-code"></i> Built with PHP & MySQL</span></div></div>
         <div class="about-stats"><div class="stat-box"><div class="stat-number">500+</div><div>Books Managed</div></div><div class="stat-box"><div class="stat-number">100+</div><div>Active Members</div></div><div class="stat-box"><div class="stat-number">24/7</div><div>Online Access</div></div><div class="stat-box"><div class="stat-number">$0.50</div><div>Daily Fine Rate</div></div></div>
     </section>
     
-    <!-- Contact Section -->
     <section id="contact" class="contact-section">
         <div class="contact-container">
             <div class="contact-info"><h3>Get in <span class="hero-gradient">Touch</span></h3><div class="contact-detail"><div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div><div>Niels Brock College, Copenhagen, Denmark</div></div><div class="contact-detail"><div class="contact-icon"><i class="fas fa-envelope"></i></div><div>support@libtechsolutions.com</div></div><div class="contact-detail"><div class="contact-icon"><i class="fas fa-phone"></i></div><div>+45 1234 5678</div></div></div>
@@ -212,13 +197,13 @@ if(isset($_SESSION['admin_id'])) {
         </div>
     </section>
     
-    <!-- Footer -->
     <footer class="footer"><div class="social-links"><a href="#"><i class="fab fa-facebook"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin"></i></a><a href="#"><i class="fab fa-github"></i></a></div><p>© 2026 LibTech Solutions | Built with <i class="fas fa-heart" style="color:#ec4899;"></i> by De Montfort University Students</p></footer>
     
     <script>
         function openLoginModal() {
             document.getElementById('loginModal').classList.add('active');
             document.getElementById('ajaxError').style.display = 'none';
+            document.getElementById('ajaxError').innerHTML = '';
         }
         
         function closeLoginModal() {
@@ -249,10 +234,9 @@ if(isset($_SESSION['admin_id'])) {
             errorDiv.style.display = 'block';
         }
         
-        function doLogin() {
-            var email = document.getElementById('email').value;
-            var password = document.getElementById('password').value;
-            var role = 'Member';
+        function doMemberLogin() {
+            var email = document.getElementById('memberEmail').value;
+            var password = document.getElementById('memberPassword').value;
             var btn = event.target;
             
             if(email === "") {
@@ -270,12 +254,13 @@ if(isset($_SESSION['admin_id'])) {
             fetch('auth/login-ajax.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email, password: password, role: role })
+                body: JSON.stringify({ 
+                    email: email, 
+                    password: password, 
+                    role: 'Member' 
+                })
             })
             .then(function(response) { 
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
-                }
                 return response.json();
             })
             .then(function(data) {
@@ -291,15 +276,14 @@ if(isset($_SESSION['admin_id'])) {
             .catch(function(error) {
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Member <i class="fas fa-arrow-right"></i>';
-                console.error('Error details:', error);
-                showError('Connection error: ' + error.message + '. Please check that auth/login-ajax.php exists.');
+                console.error('Fetch error:', error);
+                showError('Cannot connect to server. Please check that auth/login-ajax.php exists.');
             });
         }
         
         function doLibrarianLogin() {
             var email = document.getElementById('librarianEmail').value;
             var password = document.getElementById('librarianPassword').value;
-            var role = 'Librarian';
             var btn = event.target;
             
             if(email === "") {
@@ -317,12 +301,13 @@ if(isset($_SESSION['admin_id'])) {
             fetch('auth/login-ajax.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email, password: password, role: role })
+                body: JSON.stringify({ 
+                    email: email, 
+                    password: password, 
+                    role: 'Librarian' 
+                })
             })
-            .then(function(response) {
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
-                }
+            .then(function(response) { 
                 return response.json();
             })
             .then(function(data) {
@@ -338,8 +323,8 @@ if(isset($_SESSION['admin_id'])) {
             .catch(function(error) {
                 btn.disabled = false;
                 btn.innerHTML = 'Login as Librarian <i class="fas fa-arrow-right"></i>';
-                console.error('Error details:', error);
-                showError('Connection error: ' + error.message + '. Please check that auth/login-ajax.php exists.');
+                console.error('Fetch error:', error);
+                showError('Cannot connect to server. Please check that auth/login-ajax.php exists.');
             });
         }
         

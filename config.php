@@ -1,27 +1,45 @@
 <?php
 // =============================================
-// SECURE CONFIGURATION
+// SECURE CONFIGURATION - Using Environment Variables
 // =============================================
 
-// Security Headers - Add at top of every page
-header("X-Frame-Options: DENY");
-header("X-XSS-Protection: 1; mode=block");
-header("X-Content-Type-Options: nosniff");
-header("Referrer-Policy: strict-origin-when-cross-origin");
+// =============================================
+// LOAD ENVIRONMENT VARIABLES FROM .env FILE
+// =============================================
+function loadEnv($path = __DIR__) {
+    $envFile = $path . '/.env';
+    if (!file_exists($envFile)) {
+        return; // .env file doesn't exist - use defaults
+    }
+    
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        // Skip comments
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+        
+        // Parse key=value
+        $parts = explode('=', $line, 2);
+        if (count($parts) == 2) {
+            $key = trim($parts[0]);
+            $value = trim($parts[1]);
+            putenv("$key=$value");
+            $_ENV[$key] = $value;
+        }
+    }
+}
 
-// Force HTTPS in production (uncomment when using HTTPS)
-// if($_SERVER['HTTP_HOST'] != 'localhost' && empty($_SERVER['HTTPS'])) {
-//     header('Location: https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
-//     exit();
-// }
+// Load environment variables
+loadEnv();
 
 // =============================================
-// DATABASE CONNECTION
+// DATABASE CONNECTION - Using Environment Variables
 // =============================================
-$host = 'localhost';
-$user = 'root';
-$password = '';
-$dbname = 'libtech_db';
+$host = getenv('DB_HOST') ?: 'localhost';
+$user = getenv('DB_USER') ?: 'root';
+$password = getenv('DB_PASSWORD') ?: '';
+$dbname = getenv('DB_NAME') ?: 'libtech_db';
 
 $conn = new mysqli($host, $user, $password, $dbname);
 
@@ -41,8 +59,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Session timeout (30 minutes)
-if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > 1800)) {
+// Session timeout (from environment variable or default 30 minutes)
+$session_timeout = (int)(getenv('SESSION_TIMEOUT') ?: 1800);
+if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > $session_timeout)) {
     session_unset();
     session_destroy();
     if(basename($_SERVER['PHP_SELF']) != 'index.php') {
@@ -58,18 +77,22 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 // =============================================
+// SECURITY HEADERS - ONLY FOR NON-AJAX PAGES
+// =============================================
+if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strpos($_SERVER['SCRIPT_NAME'], 'login-ajax.php') === false) {
+    header("X-Frame-Options: DENY");
+    header("X-XSS-Protection: 1; mode=block");
+    header("X-Content-Type-Options: nosniff");
+    header("Referrer-Policy: strict-origin-when-cross-origin");
+}
+
+// =============================================
 // NOTIFICATION HELPER FUNCTIONS
 // =============================================
 
-/**
- * Get unread notification count for a member (uses read_status column)
- * @param mysqli $conn Database connection
- * @param int $member_id Member ID
- * @return int Number of unread notifications
- */
 function getUnreadNotificationCount($conn, $member_id) {
     if(!$member_id) return 0;
-    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM notification WHERE member_id = ? AND read_status = 1");
+    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM notification WHERE member_id = ? AND (read_status = 1 OR read_status IS NULL)");
     $stmt->bind_param("i", $member_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -77,14 +100,6 @@ function getUnreadNotificationCount($conn, $member_id) {
     return $data['count'] ?? 0;
 }
 
-/**
- * Get all notifications for a member
- * @param mysqli $conn Database connection
- * @param int $member_id Member ID
- * @param string $type Filter by notification type (BORROW, REMINDER, OVERDUE, FINE, or 'all')
- * @param string $status Filter by status (unread, read, or 'all')
- * @return array Array of notifications
- */
 function getMemberNotifications($conn, $member_id, $type = 'all', $status = 'all') {
     if(!$member_id) return [];
     
@@ -100,7 +115,7 @@ function getMemberNotifications($conn, $member_id, $type = 'all', $status = 'all
     
     if($status != 'all') {
         $status_value = ($status == 'unread') ? 1 : 0;
-        $query .= " AND read_status = ?";
+        $query .= " AND (read_status = ? OR read_status IS NULL)";
         $params[] = $status_value;
         $types .= "i";
     }
@@ -119,24 +134,12 @@ function getMemberNotifications($conn, $member_id, $type = 'all', $status = 'all
     return $notifications;
 }
 
-/**
- * Mark a notification as read
- * @param mysqli $conn Database connection
- * @param int $notification_id Notification ID
- * @return bool True on success
- */
 function markNotificationAsRead($conn, $notification_id) {
     $stmt = $conn->prepare("UPDATE notification SET read_status = 0 WHERE notification_id = ?");
     $stmt->bind_param("i", $notification_id);
     return $stmt->execute();
 }
 
-/**
- * Delete a notification
- * @param mysqli $conn Database connection
- * @param int $notification_id Notification ID
- * @return bool True on success
- */
 function deleteNotification($conn, $notification_id) {
     $stmt = $conn->prepare("DELETE FROM notification WHERE notification_id = ?");
     $stmt->bind_param("i", $notification_id);
