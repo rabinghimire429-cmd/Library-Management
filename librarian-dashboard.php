@@ -1,33 +1,47 @@
 <?php
 /**
- * Librarian Dashboard - Secure Version
+ * librarian-dashboard.php - Librarian Dashboard Page
+ * Author: Rabin Ghimire
+ * Module: Authentication & Dashboard
+ * 
+ * FUNCTIONALITY: 
+ * - Display library statistics (books, members, active borrowings, overdue)
+ * - Show overdue books preview
+ * - Provide navigation to all management features
+ * - ETHICS: Transparency - Help section explains librarian responsibilities
+ * - SECURITY: Role-based access control (only Librarian can access)
  */
 
+// Start session
 session_start();
 
-// CSRF Protection
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
+// =============================================
+// SECURITY: Role-based access control
+// Only Librarian role can access this page
+// =============================================
 if(!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] !== 'Librarian') {
     header('Location: index.php');
     exit();
 }
 
+// Include database configuration and helper functions
 require_once 'config.php';
+require_once 'includes/2fa.php';
 
 $admin_id = $_SESSION['admin_id'];
 $admin_email = $_SESSION['admin_email'];
 
-// Get librarian details using prepared statement
+// =============================================
+// FUNCTIONALITY: Get librarian details
+// Using prepared statement to prevent SQL injection
+// =============================================
 $stmt = $conn->prepare("SELECT * FROM member WHERE admin_id = ?");
 $stmt->bind_param("i", $admin_id);
 $stmt->execute();
-$member_query = $stmt->get_result();
-$member = $member_query->fetch_assoc();
+$member = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
+// Handle display name
 if($member && !empty($member['full_name'])) {
     $name = $member['full_name'];
 } else {
@@ -37,13 +51,19 @@ if($member && !empty($member['full_name'])) {
 $librarian_id = $member['member_id'] ?? 0;
 $librarian_phone = $member['phone'] ?? '';
 
-// Get statistics using prepared statements
+// =============================================
+// FUNCTIONALITY: Get library statistics
+// Total books, members, active borrowings, overdue count
+// =============================================
 $total_books = $conn->query("SELECT COUNT(*) as count FROM book")->fetch_assoc()['count'];
 $total_members = $conn->query("SELECT COUNT(*) as count FROM member")->fetch_assoc()['count'];
 $active_borrowings = $conn->query("SELECT COUNT(*) as count FROM transaction WHERE return_date IS NULL")->fetch_assoc()['count'];
 $overdue_count = $conn->query("SELECT COUNT(*) as count FROM transaction WHERE return_date IS NULL AND due_date < CURDATE()")->fetch_assoc()['count'];
 
-// Get recent overdue books using prepared statement
+// =============================================
+// FUNCTIONALITY: Get recent overdue books preview
+// Shows top 5 overdue books with member and book details
+// =============================================
 $overdue_stmt = $conn->prepare("SELECT t.*, m.full_name as member_name, b.title as book_title 
                               FROM transaction t 
                               JOIN member m ON t.member_id = m.member_id 
@@ -54,10 +74,18 @@ $overdue_stmt->execute();
 $overdue_preview = $overdue_stmt->get_result();
 $overdue_stmt->close();
 
-// Update profile
+// =============================================
+// FUNCTIONALITY: Get 2FA status for this librarian
+// =============================================
+$is_2fa_enabled = is2FAEnabled($conn, $admin_id);
+
+// =============================================
+// FUNCTIONALITY: Update profile
+// Processes form submission for editing profile
+// =============================================
 $update_msg = '';
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
-    // Verify CSRF token
+    // CSRF Protection - Verify token
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
         $update_msg = "<div class='success-msg' style='background:rgba(239,68,68,0.2); color:#f87171;'>❌ Security validation failed!</div>";
     } else {
@@ -73,6 +101,23 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         $name = $full_name;
     }
 }
+
+// =============================================
+// FUNCTIONALITY: Enable/Disable 2FA for Librarian
+// =============================================
+if(isset($_POST['enable_2fa'])) {
+    if(enable2FAForUser($conn, $admin_id)) {
+        $update_msg = "<div class='success-msg'>✅ Two-Factor Authentication has been ENABLED for your account!</div>";
+        $is_2fa_enabled = true;
+    }
+}
+
+if(isset($_POST['disable_2fa'])) {
+    if(disable2FAForUser($conn, $admin_id)) {
+        $update_msg = "<div class='success-msg'>✅ Two-Factor Authentication has been DISABLED for your account.</div>";
+        $is_2fa_enabled = false;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -83,6 +128,10 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* =============================================
+           PRESENTATION LAYER - CSS STYLES
+           Modern glassmorphism design for librarian dashboard
+        ============================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
@@ -91,6 +140,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             color: #e4e6eb;
         }
         
+        /* Navigation Bar */
         .navbar {
             background: rgba(15,23,42,0.95);
             backdrop-filter: blur(12px);
@@ -108,6 +158,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .logo-img { height: 45px; width: auto; border-radius: 10px; }
         .logo-text { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
+        /* Profile Dropdown */
         .profile-dropdown {
             position: relative;
             display: inline-block;
@@ -160,8 +211,10 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .dropdown-content a:hover { background: rgba(99,102,241,0.3); }
         .logout-btn { color: #f87171 !important; }
         
+        /* Main Container */
         .container { max-width: 1400px; margin: 40px auto; padding: 0 40px; }
         
+        /* Welcome Section */
         .welcome-section {
             background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15));
             border-radius: 40px;
@@ -173,6 +226,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .welcome-section h1 { font-size: 36px; font-weight: 800; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .welcome-section p { color: #b9bbbe; }
         
+        /* Statistics Cards */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 50px; }
         .stat-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; transition: all 0.3s; position: relative; }
         .stat-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.08); border-color: #6366f1; }
@@ -180,6 +234,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .stat-label { color: #b9bbbe; font-size: 14px; }
         .warning-badge { position: absolute; top: 15px; right: 15px; background: #ef4444; color: white; font-size: 11px; padding: 4px 10px; border-radius: 20px; }
         
+        /* Menu Grid - Navigation Cards */
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 25px; margin-bottom: 50px; }
         .menu-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; text-decoration: none; transition: all 0.3s; display: block; }
         .menu-card:hover { transform: translateY(-8px); background: rgba(255,255,255,0.1); border-color: #6366f1; }
@@ -187,6 +242,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .menu-card h3 { font-size: 18px; font-weight: 600; color: white; margin-bottom: 8px; }
         .menu-card p { color: #8b8d94; font-size: 12px; }
         
+        /* Overdue Books Preview Section */
         .overdue-section { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; margin-top: 20px; }
         .overdue-section h3 { font-size: 20px; margin-bottom: 20px; color: #f87171; }
         .overdue-list { display: flex; flex-direction: column; gap: 12px; }
@@ -197,6 +253,44 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .view-all { text-align: center; margin-top: 20px; }
         .view-all a { color: #818cf8; text-decoration: none; }
         
+        /* Settings Card for 2FA Toggle */
+        .settings-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 30px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        .settings-card h3 {
+            color: #a78bfa;
+            margin-bottom: 15px;
+        }
+        .settings-card p {
+            color: #b9bbbe;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        .btn-2fa-enable {
+            background: linear-gradient(135deg, #10b981, #059669);
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-2fa-disable {
+            background: linear-gradient(135deg, #f87171, #dc2626);
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        /* ETHICS: Transparency - Help Section */
         .help-section { background: rgba(99,102,241,0.08); border-radius: 24px; padding: 25px; margin-top: 40px; border: 1px solid rgba(99,102,241,0.2); }
         .help-section h3 { color: #a78bfa; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
         .help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
@@ -204,6 +298,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .help-card strong { display: block; margin-bottom: 8px; }
         .help-card p { font-size: 13px; color: #b9bbbe; line-height: 1.5; }
         
+        /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: rgba(20,20,50,0.98); border-radius: 30px; padding: 30px; width: 450px; max-width: 90%; border: 1px solid rgba(255,255,255,0.2); }
@@ -213,6 +308,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         .close-btn { float: right; font-size: 24px; cursor: pointer; color: #888; }
         .success-msg { background: rgba(16,185,129,0.2); color: #34d399; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
         
+        /* Footer */
         .footer { text-align: center; padding: 30px; color: #8b8d94; font-size: 12px; margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); }
         
         @media (max-width: 768px) {
@@ -224,6 +320,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     </style>
 </head>
 <body>
+    <!-- Navigation Bar with Logo and Profile Dropdown -->
     <div class="navbar">
         <div class="logo">
             <img src="logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
@@ -244,11 +341,16 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     </div>
 
     <div class="container">
+        <!-- Welcome Section -->
         <div class="welcome-section">
             <h1>Welcome, <?php echo htmlspecialchars($name); ?>! 👩‍💼</h1>
             <p>Manage your library efficiently</p>
+            <?php if($is_2fa_enabled): ?>
+                <p style="margin-top: 10px; color: #34d399;"><i class="fas fa-shield-alt"></i> 2FA Protected Account</p>
+            <?php endif; ?>
         </div>
 
+        <!-- Statistics Cards -->
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-number"><?php echo $total_books; ?></div><div class="stat-label"><i class="fas fa-book"></i> Total Books</div></div>
             <div class="stat-card"><div class="stat-number"><?php echo $total_members; ?></div><div class="stat-label"><i class="fas fa-users"></i> Total Members</div></div>
@@ -258,6 +360,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             </div>
         </div>
 
+        <!-- Menu Grid - Navigation Cards -->
         <div class="menu-grid">
             <a href="Books/add-book.php" class="menu-card"><div class="menu-icon">📚</div><h3>Add New Book</h3><p>Add books to catalog</p></a>
             <a href="Books/search-books.php" class="menu-card"><div class="menu-icon">🔍</div><h3>Search Books</h3><p>Find books in catalog</p></a>
@@ -268,6 +371,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             <a href="Notification/notifications.php" class="menu-card"><div class="menu-icon">🔔</div><h3>Notifications</h3><p>Send & view notifications</p></a>
         </div>
 
+        <!-- Recent Overdue Books Preview -->
         <div class="overdue-section">
             <h3><i class="fas fa-exclamation-triangle"></i> Recent Overdue Books</h3>
             <div class="overdue-list">
@@ -295,6 +399,43 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             </div>
         </div>
 
+        <!-- ============================================= -->
+        <!-- SECURITY: Two-Factor Authentication Settings  -->
+        <!-- Allows librarians to enable/disable 2FA      -->
+        <!-- ============================================= -->
+        <div class="settings-card">
+            <h3><i class="fas fa-shield-alt"></i> Security Settings</h3>
+            <p>Two-Factor Authentication (2FA) adds an extra layer of security to your account. When enabled, you'll need to enter a verification code after logging in with your password.</p>
+            
+            <?php if($is_2fa_enabled): ?>
+                <p style="color: #34d399; margin-bottom: 15px;">
+                    <i class="fas fa-check-circle"></i> 2FA is currently ENABLED on your account
+                </p>
+                <form method="POST">
+                    <button type="submit" name="disable_2fa" class="btn-2fa-disable" onclick="return confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')">
+                        <i class="fas fa-lock-open"></i> Disable 2FA
+                    </button>
+                </form>
+            <?php else: ?>
+                <p style="color: #fbbf24; margin-bottom: 15px;">
+                    <i class="fas fa-exclamation-triangle"></i> 2FA is currently DISABLED on your account
+                </p>
+                <form method="POST">
+                    <button type="submit" name="enable_2fa" class="btn-2fa-enable">
+                        <i class="fas fa-shield-alt"></i> Enable 2FA
+                    </button>
+                </form>
+            <?php endif; ?>
+            <p style="font-size: 12px; color: #8b8d94; margin-top: 15px;">
+                <i class="fas fa-info-circle"></i> When enabled, you'll receive a 6-digit code during login. Check your browser console (F12) for the demo code.
+            </p>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- ETHICS: Transparency - Help Section          -->
+        <!-- Explains librarian responsibilities          -->
+        <!-- This addresses the Ethics Checklist requirement -->
+        <!-- ============================================= -->
         <div class="help-section">
             <h3><i class="fas fa-shield-alt"></i> Librarian Responsibilities</h3>
             <div class="help-grid">
@@ -318,6 +459,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         </div>
     </div>
 
+    <!-- Edit Profile Modal -->
     <div id="editProfileModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeEditProfileModal()">&times;</span>
@@ -337,9 +479,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     </div>
 
     <script>
-        function openEditProfileModal() { document.getElementById('editProfileModal').classList.add('active'); }
-        function closeEditProfileModal() { document.getElementById('editProfileModal').classList.remove('active'); }
-        window.onclick = function(e) { if(e.target.classList.contains('modal')) e.target.classList.remove('active'); }
+        // Open edit profile modal
+        function openEditProfileModal() { 
+            document.getElementById('editProfileModal').classList.add('active'); 
+        }
+        
+        // Close edit profile modal
+        function closeEditProfileModal() { 
+            document.getElementById('editProfileModal').classList.remove('active'); 
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(e) { 
+            if(e.target.classList.contains('modal')) e.target.classList.remove('active'); 
+        }
     </script>
 </body>
 </html>
