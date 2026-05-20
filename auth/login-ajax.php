@@ -1,6 +1,10 @@
 <?php
+/**
+ * login-ajax.php - COMPLETE VERSION with 2FA Support
+ */
 
 require_once '../config.php';
+require_once '../includes/2fa.php';
 
 header('Content-Type: application/json');
 
@@ -16,7 +20,41 @@ if (!$data) {
 $email = trim($data['email'] ?? '');
 $password = $data['password'] ?? '';
 $selected_role = $data['role'] ?? 'Member';
+$two_factor_code = $data['two_factor_code'] ?? '';
 
+// Check if this is a 2FA verification attempt
+if (isset($_SESSION['2fa_pending_user_id']) && !empty($two_factor_code)) {
+    // Verify 2FA code
+    $verification = verify2FACode($two_factor_code, $_SESSION['2fa_code'], $_SESSION['2fa_expires']);
+    
+    if ($verification['success']) {
+        // Complete the login
+        $_SESSION['admin_id'] = $_SESSION['2fa_pending_user_id'];
+        $_SESSION['admin_email'] = $_SESSION['2fa_pending_email'];
+        $_SESSION['admin_role'] = $_SESSION['2fa_pending_role'];
+        $_SESSION['LAST_ACTIVITY'] = time();
+        
+        // Update last login time
+        $update_stmt = $conn->prepare("UPDATE admin SET Last_login = NOW() WHERE User_id = ?");
+        $update_stmt->bind_param("i", $_SESSION['admin_id']);
+        $update_stmt->execute();
+        $update_stmt->close();
+        
+        // Clear 2FA session data
+        unset($_SESSION['2fa_pending_user_id']);
+        unset($_SESSION['2fa_pending_email']);
+        unset($_SESSION['2fa_pending_role']);
+        unset($_SESSION['2fa_code']);
+        unset($_SESSION['2fa_expires']);
+        
+        echo json_encode(['success' => true, 'role' => $_SESSION['admin_role'], 'message' => 'Login successful']);
+    } else {
+        echo json_encode(['success' => false, 'require_2fa' => true, 'message' => $verification['message']]);
+    }
+    exit();
+}
+
+// Normal login flow (first step)
 if (empty($email) || empty($password)) {
     echo json_encode(['success' => false, 'message' => 'Email and password are required']);
     exit();
@@ -100,7 +138,7 @@ $reset_stmt->bind_param("i", $admin['User_id']);
 $reset_stmt->execute();
 $reset_stmt->close();
 
-// ROLE VALIDATION - Critical for Member vs Librarian
+// ROLE VALIDATION
 if ($selected_role == 'Librarian' && $admin['Role'] != 'Librarian') {
     echo json_encode(['success' => false, 'message' => 'This email belongs to a Member. Please select "Member Login" instead.']);
     $conn->close();
@@ -113,10 +151,30 @@ if ($selected_role == 'Member' && $admin['Role'] != 'Member') {
     exit();
 }
 
-// Regenerate session ID for security
+// Check if 2FA is enabled for this user
+if (is2FAEnabled($conn, $admin['User_id'])) {
+    // Generate and send 2FA code
+    $code = generate2FACode();
+    send2FACodeByEmail($admin['Email'], $code);
+    
+    // Store user ID temporarily for 2FA verification
+    $_SESSION['2fa_pending_user_id'] = $admin['User_id'];
+    $_SESSION['2fa_pending_email'] = $admin['Email'];
+    $_SESSION['2fa_pending_role'] = $admin['Role'];
+    
+    echo json_encode([
+        'success' => false, 
+        'require_2fa' => true, 
+        'message' => '2FA required. Please enter your verification code.',
+        'email' => $admin['Email']
+    ]);
+    $conn->close();
+    exit();
+}
+
+// No 2FA - complete login immediately
 session_regenerate_id(true);
 
-// Set session variables
 $_SESSION['admin_id'] = $admin['User_id'];
 $_SESSION['admin_email'] = $admin['Email'];
 $_SESSION['admin_role'] = $admin['Role'];
@@ -138,6 +196,5 @@ $log_stmt->close();
 
 $conn->close();
 
-// Return success
 echo json_encode(['success' => true, 'role' => $admin['Role']]);
 ?>
