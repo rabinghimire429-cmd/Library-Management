@@ -1,19 +1,24 @@
 <?php
 session_start();
 
+// Check if user is logged in
 if(!isset($_SESSION['admin_id'])) {
     header('Location: ../index.php');
     exit();
 }
 
+// Database connection
 $conn = new mysqli('localhost', 'root', '', 'libtech_db');
 
+// Check database connection
 if($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Get logged in admin ID
 $admin_id = intval($_SESSION['admin_id']);
 
+// Get member ID related to logged in user
 $member_result = $conn->query("
     SELECT member_id 
     FROM member 
@@ -23,15 +28,17 @@ $member_result = $conn->query("
 $member = $member_result->fetch_assoc();
 $member_id = $member['member_id'] ?? 0;
 
+// Validate member account
 if($member_id <= 0) {
     die("Invalid member account.");
 }
 
-/* RETURN BOOK */
+/* Return functionality */
 if(isset($_GET['return'])) {
 
     $trans_id = intval($_GET['return']);
 
+    // Get borrowing transaction
     $trans_result = $conn->query("
         SELECT * 
         FROM transaction 
@@ -43,16 +50,24 @@ if(isset($_GET['return'])) {
 
         $trans = $trans_result->fetch_assoc();
 
+        // Prevent double return
         if($trans['status'] != 'Returned') {
 
             $return_date = date('Y-m-d');
             $fine = 0;
 
+            // Fine calculation if overdue
             if($return_date > $trans['due_date']) {
-                $days = (strtotime($return_date) - strtotime($trans['due_date'])) / 86400;
+
+                $days = (
+                    strtotime($return_date) -
+                    strtotime($trans['due_date'])
+                ) / 86400;
+
                 $fine = $days * 0.50;
             }
 
+            // Update borrowing status
             $conn->query("
                 UPDATE transaction 
                 SET return_date = '$return_date',
@@ -61,6 +76,7 @@ if(isset($_GET['return'])) {
                 WHERE transaction_id = $trans_id
             ");
 
+            // Increase available book copies
             $conn->query("
                 UPDATE book 
                 SET available_copies = available_copies + 1 
@@ -73,11 +89,12 @@ if(isset($_GET['return'])) {
     exit();
 }
 
-/* DELETE ONLY RETURNED HISTORY */
+/* Delete functionality */
 if(isset($_GET['delete'])) {
 
     $delete_id = intval($_GET['delete']);
 
+    // Only returned history can be deleted
     $check = $conn->query("
         SELECT * 
         FROM transaction 
@@ -96,6 +113,7 @@ if(isset($_GET['delete'])) {
         ");
 
     } else {
+
         die("You can only delete returned borrowing history.");
     }
 
@@ -103,10 +121,11 @@ if(isset($_GET['delete'])) {
     exit();
 }
 
-/* SEARCH + FILTER */
+/* Search and filter functionality */
 $search = $_GET['search'] ?? '';
 $status = $_GET['status'] ?? '';
 
+// List functionality - get borrowing records
 $sql = "
 SELECT t.*, b.title
 FROM transaction t
@@ -114,28 +133,38 @@ JOIN book b ON t.book_id = b.book_id
 WHERE t.member_id = $member_id
 ";
 
+// Search by book title
 if(!empty($search)) {
+
     $safe_search = $conn->real_escape_string($search);
+
     $sql .= " AND b.title LIKE '%$safe_search%'";
 }
 
+// Filter by borrowing status
 if(!empty($status)) {
+
     $safe_status = $conn->real_escape_string($status);
+
     $sql .= " AND t.status = '$safe_status'";
 }
 
 $sql .= " ORDER BY t.borrow_date DESC";
 
+// Execute query
 $transactions = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
+
 <title>My Borrowings - LibTech Solutions</title>
 
 <style>
+
 body {
     font-family: 'Segoe UI', sans-serif;
     background: #0a0a2a;
@@ -234,6 +263,7 @@ th {
 .status-returned {
     color: #34d399;
 }
+
 </style>
 </head>
 
@@ -241,31 +271,51 @@ th {
 
 <div class="container">
 
-    <a href="../member-dashboard.php">← Back to Dashboard</a>
+    <a href="../member-dashboard.php">
+        ← Back to Dashboard
+    </a>
 
     <h2>📚 My Borrowings</h2>
 
+    <!-- Search and filter form -->
+
     <form method="GET">
+
         <input type="text"
                name="search"
                placeholder="Search by book title"
                value="<?php echo htmlspecialchars($search); ?>">
 
         <select name="status">
+
             <option value="">All Status</option>
-            <option value="Borrowed" <?php if($status == 'Borrowed') echo 'selected'; ?>>
+
+            <option value="Borrowed"
+                <?php if($status == 'Borrowed') echo 'selected'; ?>>
+
                 Borrowed
+
             </option>
-            <option value="Returned" <?php if($status == 'Returned') echo 'selected'; ?>>
+
+            <option value="Returned"
+                <?php if($status == 'Returned') echo 'selected'; ?>>
+
                 Returned
+
             </option>
+
         </select>
 
         <button type="submit">Search</button>
+
     </form>
 
+    <!-- List borrowing records -->
+
     <table>
+
         <thead>
+
             <tr>
                 <th>Book</th>
                 <th>Borrow Date</th>
@@ -275,30 +325,52 @@ th {
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
+
         </thead>
 
         <tbody>
 
         <?php if($transactions->num_rows > 0): ?>
 
+            <!-- Loop through borrowing records -->
+
             <?php while($t = $transactions->fetch_assoc()): 
-                $overdue = ($t['return_date'] == null && $t['due_date'] < date('Y-m-d'));
+
+                // Check overdue books
+                $overdue = (
+                    $t['return_date'] == null &&
+                    $t['due_date'] < date('Y-m-d')
+                );
             ?>
 
             <tr>
-                <td><?php echo htmlspecialchars($t['title']); ?></td>
 
-                <td><?php echo $t['borrow_date']; ?></td>
-
-                <td class="<?php echo $overdue ? 'overdue' : ''; ?>">
-                    <?php echo $t['due_date']; ?>
-                    <?php if($overdue): ?>
-                        ⚠️ Overdue
-                    <?php endif; ?>
+                <td>
+                    <?php echo htmlspecialchars($t['title']); ?>
                 </td>
 
                 <td>
-                    <?php echo $t['return_date'] ? $t['return_date'] : 'Not Returned'; ?>
+                    <?php echo $t['borrow_date']; ?>
+                </td>
+
+                <td class="<?php echo $overdue ? 'overdue' : ''; ?>">
+
+                    <?php echo $t['due_date']; ?>
+
+                    <?php if($overdue): ?>
+                        ⚠️ Overdue
+                    <?php endif; ?>
+
+                </td>
+
+                <td>
+
+                    <?php
+                    echo $t['return_date']
+                        ? $t['return_date']
+                        : 'Not Returned';
+                    ?>
+
                 </td>
 
                 <td>
@@ -306,35 +378,56 @@ th {
                 </td>
 
                 <td>
-                    <span class="<?php echo $t['status'] == 'Returned' ? 'status-returned' : 'status-borrowed'; ?>">
+
+                    <span class="<?php echo $t['status'] == 'Returned'
+                        ? 'status-returned'
+                        : 'status-borrowed'; ?>">
+
                         <?php echo $t['status']; ?>
+
                     </span>
+
                 </td>
 
                 <td>
+
                     <?php if($t['status'] != 'Returned'): ?>
+
+                        <!-- Return button -->
 
                         <a class="btn btn-return"
                            href="?return=<?php echo $t['transaction_id']; ?>"
                            onclick="return confirm('Return this book?')">
+
                            Return
+
                         </a>
+
+                        <!-- Edit button -->
 
                         <a class="btn btn-edit"
                            href="edit-transaction.php?id=<?php echo $t['transaction_id']; ?>">
+
                            Edit
+
                         </a>
 
                     <?php else: ?>
 
+                        <!-- Delete returned history -->
+
                         <a class="btn btn-delete"
                            href="?delete=<?php echo $t['transaction_id']; ?>"
                            onclick="return confirm('Delete this returned borrowing history?')">
+
                            Delete
+
                         </a>
 
                     <?php endif; ?>
+
                 </td>
+
             </tr>
 
             <?php endwhile; ?>
@@ -342,14 +435,20 @@ th {
         <?php else: ?>
 
             <tr>
-                <td colspan="7" style="text-align:center; padding:40px;">
+
+                <td colspan="7"
+                    style="text-align:center; padding:40px;">
+
                     No borrowing records found.
+
                 </td>
+
             </tr>
 
         <?php endif; ?>
 
         </tbody>
+
     </table>
 
 </div>

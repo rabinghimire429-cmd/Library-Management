@@ -1,19 +1,24 @@
 <?php
 session_start();
 
+// Check if user is logged in
 if(!isset($_SESSION['admin_id'])) {
     header('Location: ../index.php');
     exit();
 }
 
+// Database connection
 $conn = new mysqli('localhost', 'root', '', 'libtech_db');
 
+// Check connection
 if($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Get logged in admin ID
 $admin_id = intval($_SESSION['admin_id']);
 
+// Get member details
 $member = $conn->query("
     SELECT member_id, full_name, email
     FROM member
@@ -28,21 +33,19 @@ if($member_id <= 0) {
     die("Invalid member.");
 }
 
+// Step control for page actions
 $step = $_GET['step'] ?? 'list';
+
 $fine_id = intval($_GET['fine_id'] ?? 0);
 
 $payment_msg = '';
 
-/* =========================================
-   SEARCH + FILTER
-========================================= */
+/* Search and filter functionality */
 
 $search = $_GET['search'] ?? '';
 $status = $_GET['status'] ?? '';
 
-/* =========================================
-   GET FINE DETAILS
-========================================= */
+/* Get fine details */
 
 if($step == 'pay' && $fine_id > 0) {
 
@@ -54,6 +57,7 @@ if($step == 'pay' && $fine_id > 0) {
         AND t.member_id = $member_id
     ";
 
+    // Get selected fine information
     $fine = $conn->query($fine_query)->fetch_assoc();
 
     if(!$fine) {
@@ -61,9 +65,7 @@ if($step == 'pay' && $fine_id > 0) {
     }
 }
 
-/* =========================================
-   PROCESS PAYMENT
-========================================= */
+/* Payment functionality */
 
 if($step == 'process' && $_SERVER['REQUEST_METHOD'] == 'POST') {
 
@@ -74,26 +76,29 @@ if($step == 'process' && $_SERVER['REQUEST_METHOD'] == 'POST') {
     $expiry = trim($_POST['expiry']);
     $cvv = trim($_POST['cvv']);
 
-    /* VALIDATION */
+    /* Validation */
 
+    // Validate cardholder name
     if(empty($card_name)) {
         die("Cardholder name required.");
     }
 
+    // Validate card number
     if(!preg_match('/^[0-9 ]{16,19}$/', $card_number)) {
         die("Invalid card number.");
     }
 
+    // Validate expiry date
     if(!preg_match('/^(0[1-9]|1[0-2])\/[0-9]{2}$/', $expiry)) {
         die("Invalid expiry date.");
     }
 
+    // Validate CVV
     if(!preg_match('/^[0-9]{3,4}$/', $cvv)) {
         die("Invalid CVV.");
     }
 
-    // Verify ownership
-
+    // Verify ownership of fine
     $verify = $conn->query("
         SELECT *
         FROM transaction
@@ -105,16 +110,14 @@ if($step == 'process' && $_SERVER['REQUEST_METHOD'] == 'POST') {
         die("Unauthorized payment.");
     }
 
-    // Update payment
-
+    // Update payment status
     $conn->query("
         UPDATE transaction
         SET fine_paid = 1
         WHERE transaction_id = $fine_id
     ");
 
-    // Get fine details
-
+    // Get fine details for notification
     $fine_details = $conn->query("
         SELECT t.*, b.title
         FROM transaction t
@@ -122,8 +125,7 @@ if($step == 'process' && $_SERVER['REQUEST_METHOD'] == 'POST') {
         WHERE t.transaction_id = $fine_id
     ")->fetch_assoc();
 
-    // Notification
-
+    // Create payment confirmation message
     $subject = "💰 Fine Payment Confirmation - LibTech Solutions";
 
     $message = "
@@ -138,6 +140,7 @@ Best regards,
 LibTech Team
 ";
 
+    // Save notification
     $conn->query("
         INSERT INTO notification
         (member_id, notification_type, subject, message, status)
@@ -152,6 +155,7 @@ LibTech Team
     </div>
     ";
 
+    // Redirect after payment
     echo "
     <script>
         setTimeout(function() {
@@ -161,9 +165,7 @@ LibTech Team
     ";
 }
 
-/* =========================================
-   DELETE FINE HISTORY
-========================================= */
+/* Delete functionality */
 
 if(isset($_GET['delete'])) {
 
@@ -171,6 +173,7 @@ if(isset($_GET['delete'])) {
 
     if($delete_id > 0) {
 
+        // Delete fine record
         $conn->query("
             DELETE FROM transaction
             WHERE transaction_id = $delete_id
@@ -182,9 +185,7 @@ if(isset($_GET['delete'])) {
     exit();
 }
 
-/* =========================================
-   GET FINES
-========================================= */
+/* List functionality */
 
 $sql = "
 SELECT t.*, b.title
@@ -194,6 +195,7 @@ WHERE t.member_id = $member_id
 AND t.fine_amount > 0
 ";
 
+// Search fines by book title
 if(!empty($search)) {
 
     $search = $conn->real_escape_string($search);
@@ -201,6 +203,7 @@ if(!empty($search)) {
     $sql .= " AND b.title LIKE '%$search%'";
 }
 
+// Filter paid and unpaid fines
 if($status !== '') {
 
     $status = intval($status);
@@ -210,11 +213,10 @@ if($status !== '') {
 
 $sql .= " ORDER BY t.due_date DESC";
 
+// Execute query
 $fines = $conn->query($sql);
 
-/* =========================================
-   TOTAL FINES
-========================================= */
+/* Calculate total fines */
 
 $total = 0;
 
@@ -371,12 +373,14 @@ button {
 
     <h2>💰 My Fines</h2>
 
+    <!-- Display total outstanding fines -->
+
     <div class="total">
         <p>Total Outstanding Fines</p>
         <h2>$<?php echo number_format($total, 2); ?></h2>
     </div>
 
-    <!-- SEARCH + FILTER -->
+    <!-- Search and filter form -->
 
     <form method="GET" style="margin-bottom:20px;">
 
@@ -399,6 +403,8 @@ button {
 
     <?php if($fines->num_rows > 0): ?>
 
+        <!-- List fine records -->
+
         <table>
 
             <thead>
@@ -412,6 +418,8 @@ button {
             </thead>
 
             <tbody>
+
+            <!-- Loop through fines -->
 
             <?php while($fine = $fines->fetch_assoc()): ?>
 
@@ -435,19 +443,27 @@ button {
 
                     <td>
 
+                        <!-- Pay button -->
+
                         <?php if(!$fine['fine_paid']): ?>
 
                             <a class="btn btn-pay"
                                href="?step=pay&fine_id=<?php echo $fine['transaction_id']; ?>">
+
                                Pay Now
+
                             </a>
 
                         <?php endif; ?>
 
+                        <!-- Delete button -->
+
                         <a class="btn btn-delete"
                            href="?delete=<?php echo $fine['transaction_id']; ?>"
                            onclick="return confirm('Delete this fine record?')">
+
                            Delete
+
                         </a>
 
                     </td>
@@ -474,6 +490,8 @@ button {
 
     <h2>💳 Pay Fine</h2>
 
+    <!-- Fine details -->
+
     <div class="payment-box">
 
         <p>
@@ -492,6 +510,8 @@ button {
         </p>
 
     </div>
+
+    <!-- Payment form -->
 
     <form method="POST" action="?step=process">
 
@@ -536,6 +556,8 @@ button {
     </form>
 
 <?php elseif($step == 'process'): ?>
+
+    <!-- Payment success message -->
 
     <div class="payment-box">
 

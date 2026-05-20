@@ -1,19 +1,24 @@
 <?php
 session_start();
 
+// Check if the user is logged in
 if(!isset($_SESSION['admin_id'])) {
     header('Location: ../index.php');
     exit();
 }
 
+// Database connection
 $conn = new mysqli('localhost', 'root', '', 'libtech_db');
 
+// Check database connection
 if($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Get logged-in admin ID
 $admin_id = intval($_SESSION['admin_id']);
 
+// Get member ID connected to the logged-in admin account
 $member_result = $conn->query("
     SELECT member_id
     FROM member
@@ -23,16 +28,20 @@ $member_result = $conn->query("
 $member = $member_result->fetch_assoc();
 $member_id = $member['member_id'] ?? 0;
 
+// Validate member account
 if($member_id <= 0) {
     die("Invalid member account.");
 }
 
+// Get transaction ID from URL
 $id = intval($_GET['id'] ?? 0);
 
+// Validate transaction ID
 if($id <= 0) {
     die("Invalid transaction ID.");
 }
 
+// Get borrowing transaction details
 $result = $conn->query("
     SELECT t.*, b.title
     FROM transaction t
@@ -41,28 +50,33 @@ $result = $conn->query("
     AND t.member_id = $member_id
 ");
 
+// Check if transaction exists
 if($result->num_rows == 0) {
     die("Transaction not found.");
 }
 
 $transaction = $result->fetch_assoc();
 
+// Returned books should not be edited
 if($transaction['status'] == 'Returned') {
     die("Returned transactions cannot be edited.");
 }
 
 $msg = '';
 
+// Update due date when form is submitted
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $due_date = $_POST['due_date'] ?? '';
 
+    // Validate due date
     if(empty($due_date)) {
         $msg = "Due date is required.";
     } elseif($due_date < $transaction['borrow_date']) {
         $msg = "Due date cannot be before borrow date.";
     } else {
 
+        // Edit functionality - update due date
         $conn->query("
             UPDATE transaction
             SET due_date = '$due_date'
@@ -148,13 +162,16 @@ button {
 
     <h2>✏️ Edit Borrowing</h2>
 
+    <!-- Display validation message -->
     <?php if($msg): ?>
         <div class="msg"><?php echo $msg; ?></div>
     <?php endif; ?>
 
+    <!-- Show current borrowing details -->
     <p><strong>Book:</strong> <?php echo htmlspecialchars($transaction['title']); ?></p>
     <p><strong>Borrow Date:</strong> <?php echo $transaction['borrow_date']; ?></p>
 
+    <!-- Edit due date form -->
     <form method="POST">
 
         <label>Due Date</label>
