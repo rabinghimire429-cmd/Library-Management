@@ -347,7 +347,7 @@ if (!isset($_SESSION['admin_id']) || $_SESSION['admin_role'] !== 'Librarian') {
         <!-- Navigation links to other module dashboards -->
         <a href="../librarian-dashboard.php"  class="menu-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
         <a href="member-management.php"       class="menu-item active"><i class="fas fa-users"></i> Members</a>
-        <a href="../Books/book-management.php" class="menu-item"><i class="fas fa-book"></i> Books</a>
+        <a href="../Books/search-books.php" class="menu-item"><i class="fas fa-book"></i> Books</a>
         <a href="../overdue-reports.php"       class="menu-item"><i class="fas fa-exclamation-circle"></i> Overdue</a>
     </nav>
     <div class="sidebar-footer">
