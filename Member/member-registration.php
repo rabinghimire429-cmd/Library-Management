@@ -12,14 +12,12 @@
 // Include config for session + DB connection
 require_once '../config.php';
 
-// Redirect already-logged-in users to their dashboard
 if (isset($_SESSION['admin_id'])) {
-    if ($_SESSION['admin_role'] === 'Librarian') {
-        header('Location: ../librarian-dashboard.php');
-    } else {
+    if ($_SESSION['admin_role'] === 'Member') {
         header('Location: ../member-dashboard.php');
+        exit();
     }
-    exit();
+    // Librarians are allowed to access this page to register members
 }
 ?>
 <!DOCTYPE html>
