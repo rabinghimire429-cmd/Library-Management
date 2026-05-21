@@ -20,7 +20,20 @@ if (!isset($_SESSION['admin_id']) || $_SESSION['admin_role'] !== 'Member') {
     exit();
 }
 
-$memberId = (int)$_SESSION['member_id']; // stored in session at login
+// Resolve this member's member_id. It may already be cached in the session;
+// otherwise look it up from the member table via the logged-in admin_id.
+$memberId = (int)($_SESSION['member_id'] ?? 0);
+if (!$memberId) {
+    $lookup = $conn->prepare("SELECT member_id FROM member WHERE admin_id = ? LIMIT 1");
+    $lookup->bind_param('i', $_SESSION['admin_id']);
+    $lookup->execute();
+    $row = $lookup->get_result()->fetch_assoc();
+    $lookup->close();
+    if ($row) {
+        $memberId = (int)$row['member_id'];
+        $_SESSION['member_id'] = $memberId;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -276,7 +289,7 @@ const MEMBER_ID = <?= $memberId ?>;
 document.addEventListener('DOMContentLoaded', loadProfile);
 
 function loadProfile() {
-    fetch(`api/member-profile-api.php?action=get&id=${MEMBER_ID}`)
+    fetch(`../api/member-profile-api.php?action=get&id=${MEMBER_ID}`)
         .then(r => r.json())
         .then(data => {
             document.getElementById('loadingState').style.display = 'none';
@@ -346,7 +359,7 @@ function saveProfile() {
     if (!valid) return;
 
     // Send update request to profile-specific API
-    fetch('api/member-profile-api.php', {
+    fetch('../api/member-profile-api.php', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update', member_id: MEMBER_ID, full_name: name, phone: phone })
@@ -365,7 +378,7 @@ function saveProfile() {
 function requestCancellation() {
     if (!confirm('Are you sure you want to request account cancellation? A librarian will review your request.')) return;
 
-    fetch('api/member-profile-api.php', {
+    fetch('../api/member-profile-api.php', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'request_cancellation', member_id: MEMBER_ID })

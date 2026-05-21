@@ -22,8 +22,20 @@ if (!isset($_SESSION['admin_id']) || $_SESSION['admin_role'] !== 'Member') {
     exit();
 }
 
-// The member can only access their own data – enforce this strictly
-$sessionMemberId = (int)$_SESSION['member_id'];
+// The member can only access their own data – enforce this strictly.
+// Resolve member_id from the session, falling back to a lookup via admin_id.
+$sessionMemberId = (int)($_SESSION['member_id'] ?? 0);
+if (!$sessionMemberId) {
+    $lookup = $conn->prepare("SELECT member_id FROM member WHERE admin_id = ? LIMIT 1");
+    $lookup->bind_param('i', $_SESSION['admin_id']);
+    $lookup->execute();
+    $row = $lookup->get_result()->fetch_assoc();
+    $lookup->close();
+    if ($row) {
+        $sessionMemberId = (int)$row['member_id'];
+        $_SESSION['member_id'] = $sessionMemberId;
+    }
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 

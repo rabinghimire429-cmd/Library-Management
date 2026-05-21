@@ -85,27 +85,27 @@ $today        = date('Y-m-d');
 $conn->begin_transaction();
 
 try {
-    // Insert into MEMBER table
+    // Insert login credentials into ADMIN table first (member.admin_id references it)
+    $role = 'Member';
+    $aStmt = $conn->prepare(
+        "INSERT INTO admin (Email, Password_hash, Role, Is_active)
+         VALUES (?, ?, ?, 1)"
+    );
+    $aStmt->bind_param('sss', $email, $passwordHash, $role);
+    $aStmt->execute();
+    $adminId = $conn->insert_id;
+    $aStmt->close();
+
+    // Insert member record, linked to the admin credentials via admin_id
     $mStmt = $conn->prepare(
         "INSERT INTO member
-            (full_name, email, phone, membership_date, books_borrowed_current,
-             total_overdue_count, member_is_blocked)
-         VALUES (?, ?, ?, ?, 0, 0, 0)"
+            (admin_id, full_name, email, phone, membership_date,
+             books_borrowed_current, total_overdue_count, member_is_blocked)
+         VALUES (?, ?, ?, ?, ?, 0, 0, 0)"
     );
-    $mStmt->bind_param('ssss', $name, $email, $phone, $today);
+    $mStmt->bind_param('issss', $adminId, $name, $email, $phone, $today);
     $mStmt->execute();
-    $memberId = $conn->insert_id;
     $mStmt->close();
-
-    // Insert into USER table so member can log in
-    $role = 'Member';
-    $uStmt = $conn->prepare(
-        "INSERT INTO user (full_name, email, password_hash, role, member_id, is_active)
-         VALUES (?, ?, ?, ?, ?, 1)"
-    );
-    $uStmt->bind_param('ssssi', $name, $email, $passwordHash, $role, $memberId);
-    $uStmt->execute();
-    $uStmt->close();
 
     // Commit both inserts
     $conn->commit();

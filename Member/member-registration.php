@@ -238,7 +238,7 @@ function doRegister() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering…';
 
-    fetch('api/member-registration-api.php', {
+    fetch('../api/member-registration-api.php', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

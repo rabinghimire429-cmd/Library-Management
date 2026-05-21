@@ -14,7 +14,7 @@
  *  - Delete a member (soft-delete flow)
  *  - View member borrowing statistics
  *
- * Connects to: api/member-api.php  (BUSINESS LOGIC + DATA LAYER)
+ * Connects to: ../api/member-api.php  (BUSINESS LOGIC + DATA LAYER)
  */
 
 // ── Layer 1: Data / Session Setup ───────────────────────────────────────────
@@ -542,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function () {
    LOAD STATS  (GET api/member-api.php?action=stats)
 ──────────────────────────────────────────────────────────── */
 function loadStats() {
-    fetch('api/member-api.php?action=stats')
+    fetch('../api/member-api.php?action=stats')
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -577,7 +577,7 @@ function loadMembers(page = 1) {
     document.getElementById('tableBody').innerHTML =
         '<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.3);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
 
-    fetch('api/member-api.php?' + params)
+    fetch('../api/member-api.php?' + params)
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -676,7 +676,7 @@ function openAddModal() {
    EDIT MEMBER – fetch existing data, pre-fill form
 ──────────────────────────────────────────────────────────── */
 function editMember(id) {
-    fetch(`api/member-api.php?action=find&id=${id}`)
+    fetch(`../api/member-api.php?action=find&id=${id}`)
         .then(r => r.json())
         .then(data => {
             if (!data.success) { showToast(data.message, true); return; }
@@ -736,7 +736,7 @@ function saveMember() {
     const body   = { action, full_name: name, email, phone, membership_date: date };
     if (id) body.member_id = id;
 
-    fetch('api/member-api.php', {
+    fetch('../api/member-api.php', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(body)
@@ -759,7 +759,7 @@ function saveMember() {
    VIEW MEMBER – display read-only profile in modal
 ──────────────────────────────────────────────────────────── */
 function viewMember(id) {
-    fetch(`api/member-api.php?action=find&id=${id}`)
+    fetch(`../api/member-api.php?action=find&id=${id}`)
         .then(r => r.json())
         .then(data => {
             if (!data.success) { showToast(data.message, true); return; }
@@ -804,7 +804,7 @@ function toggleBlock(id, isBlocked) {
 
     if (!confirm(`Are you sure you want to ${label} this member?`)) return;
 
-    fetch('api/member-api.php', {
+    fetch('../api/member-api.php', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ action: 'toggle_block', member_id: id, blocked: newState })
@@ -823,7 +823,7 @@ function toggleBlock(id, isBlocked) {
 function deleteMember(id, name) {
     if (!confirm(`Delete member "${name}"? This cannot be undone.`)) return;
 
-    fetch('api/member-api.php', {
+    fetch('../api/member-api.php', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ action: 'delete', member_id: id })
