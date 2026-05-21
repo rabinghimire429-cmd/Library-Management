@@ -24,7 +24,7 @@
  */
 
 // ── Data Layer: Connect to database ─────────────────────────────────────────
-require_once '../../config.php';   // Sets $conn (MySQLi) and starts session
+require_once '../config.php';   // Sets $conn (MySQLi) and starts session
 
 // Return JSON only – set correct Content-Type header
 header('Content-Type: application/json');

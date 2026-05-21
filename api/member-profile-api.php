@@ -12,7 +12,7 @@
  * POST { action:"request_cancellation" } – Flag for account closure
  */
 
-require_once '../../config.php';
+require_once '../config.php';
 
 header('Content-Type: application/json');
 

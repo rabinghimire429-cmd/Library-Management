@@ -13,7 +13,7 @@
  * stricter rate-limiting and validation.
  */
 
-require_once '../../config.php';
+require_once '../config.php';
 
 // Return JSON
 header('Content-Type: application/json');
