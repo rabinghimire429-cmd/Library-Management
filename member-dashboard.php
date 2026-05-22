@@ -1,5 +1,19 @@
 <?php
-
+/**
+ * member-dashboard.php - Member Dashboard Page
+ * Author: Rabin Ghimire
+ * Module: Authentication & Dashboard
+ * P Number: 59041
+ * Team: The Ideaholics
+ * 
+ * FUNCTIONALITY: 
+ * - Display member's borrowed books with due dates
+ * - Show pending fines
+ * - Display unread notifications count
+ * - Display last login time (ETHICS: Transparency & Security)
+ * - Allow profile editing
+ * - ETHICS: Transparency - Help section explains system workings
+ */
 
 // Start session and check if user is logged in
 session_start();
