@@ -1,16 +1,4 @@
 <?php
-/**
- * librarian-dashboard.php - Librarian Dashboard Page
- * Author: Rabin Ghimire
- * Module: Authentication & Dashboard
- * 
- * FUNCTIONALITY: 
- * - Display library statistics (books, members, active borrowings, overdue)
- * - Show overdue books preview
- * - Provide navigation to all management features
- * - ETHICS: Transparency - Help section explains librarian responsibilities
- * - SECURITY: Role-based access control (only Librarian can access)
- */
 
 // Start session
 session_start();
@@ -75,7 +63,27 @@ $overdue_preview = $overdue_stmt->get_result();
 $overdue_stmt->close();
 
 // =============================================
-// FUNCTIONALITY: Get 2FA status for this librarian
+// SCRUM-25: FUNCTIONALITY - Get Popular Books
+// Shows top 5 most borrowed books (by transaction count)
+// This addresses the user story: "As a librarian, I want to see popular books on my dashboard"
+// =============================================
+$popular_books_query = "
+    SELECT 
+        b.book_id, 
+        b.title, 
+        b.author, 
+        b.genre,
+        COUNT(t.transaction_id) as borrow_count
+    FROM book b
+    LEFT JOIN transaction t ON b.book_id = t.book_id
+    GROUP BY b.book_id
+    ORDER BY borrow_count DESC
+    LIMIT 5
+";
+$popular_books = $conn->query($popular_books_query);
+
+// =============================================
+// Get 2FA status for this librarian
 // =============================================
 $is_2fa_enabled = is2FAEnabled($conn, $admin_id);
 
@@ -253,6 +261,64 @@ if(isset($_POST['disable_2fa'])) {
         .view-all { text-align: center; margin-top: 20px; }
         .view-all a { color: #818cf8; text-decoration: none; }
         
+        /* ============================================= */
+        /* SCRUM-25: Popular Books Section Styling       */
+        /* Displays top 5 most borrowed books           */
+        /* ============================================= */
+        .popular-section {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 30px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        .popular-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #fbbf24;
+        }
+        .popular-section h3 i {
+            margin-right: 10px;
+        }
+        .popular-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .popular-table th,
+        .popular-table td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .popular-table th {
+            color: #818cf8;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .popular-table tr:hover td {
+            background: rgba(255,255,255,0.03);
+        }
+        .rank-1 {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        .rank-2 {
+            color: #a0aec0;
+            font-weight: bold;
+        }
+        .rank-3 {
+            color: #cd7f32;
+            font-weight: bold;
+        }
+        .borrow-count {
+            background: rgba(99,102,241,0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            display: inline-block;
+        }
+        
         /* Settings Card for 2FA Toggle */
         .settings-card {
             background: rgba(255,255,255,0.05);
@@ -316,6 +382,7 @@ if(isset($_POST['disable_2fa'])) {
             .container { padding: 0 20px; }
             .welcome-section h1 { font-size: 28px; }
             .stats-grid { grid-template-columns: 1fr; }
+            .popular-table th, .popular-table td { padding: 10px; font-size: 12px; }
         }
     </style>
 </head>
@@ -397,6 +464,53 @@ if(isset($_POST['disable_2fa'])) {
             <div class="view-all">
                 <a href="overdue-reports.php">View All Overdue Reports →</a>
             </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- SCRUM-25: POPULAR BOOKS SECTION               -->
+        <!-- Displays top 5 most borrowed books            -->
+        <!-- User Story: As a librarian, I want to see     -->
+        <!-- popular books on my dashboard                 -->
+        <!-- ============================================= -->
+        <div class="popular-section">
+            <h3><i class="fas fa-chart-line"></i> Popular Books (Most Borrowed)</h3>
+            <?php if($popular_books && $popular_books->num_rows > 0): ?>
+                <table class="popular-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Book Title</th>
+                            <th>Author</th>
+                            <th>Genre</th>
+                            <th>Times Borrowed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $rank = 1; while($book = $popular_books->fetch_assoc()): ?>
+                        <tr>
+                            <td>
+                                <?php 
+                                if($rank == 1) echo '<span class="rank-1">🥇 ' . $rank . '</span>';
+                                elseif($rank == 2) echo '<span class="rank-2">🥈 ' . $rank . '</span>';
+                                elseif($rank == 3) echo '<span class="rank-3">🥉 ' . $rank . '</span>';
+                                else echo $rank . '.';
+                                ?>
+                            </td>
+                            <td><strong><?php echo htmlspecialchars($book['title']); ?></strong></td>
+                            <td><?php echo htmlspecialchars($book['author']); ?></td>
+                            <td><?php echo htmlspecialchars($book['genre']); ?></td>
+                            <td><span class="borrow-count">📖 <?php echo $book['borrow_count']; ?> times</span></td>
+                        </tr>
+                        <?php $rank++; endwhile; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p style="text-align:center; padding:30px;">
+                    <i class="fas fa-chart-simple" style="font-size: 48px; color: #4b5563; margin-bottom: 15px; display: block;"></i>
+                    📊 No borrowing data available yet.<br>
+                    <small style="color: #8b8d94;">Popular books will appear here once members start borrowing books.</small>
+                </p>
+            <?php endif; ?>
         </div>
 
         <!-- ============================================= -->
