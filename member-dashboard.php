@@ -1,16 +1,5 @@
 <?php
-/**
- * member-dashboard.php - Member Dashboard Page
- * Author: Rabin Ghimire
- * Module: Authentication & Dashboard
- * 
- * FUNCTIONALITY: 
- * - Display member's borrowed books with due dates
- * - Show pending fines
- * - Display unread notifications count
- * - Allow profile editing
- * - ETHICS: Transparency - Help section explains system workings
- */
+
 
 // Start session and check if user is logged in
 session_start();
@@ -52,6 +41,28 @@ if($member && !empty($member['full_name']) && $member['full_name'] != $member['e
 $member_id = $member['member_id'] ?? 0;
 $member_phone = $member['phone'] ?? '';
 $member_email = $member['email'] ?? $admin_email;
+
+// =============================================
+// FUNCTIONALITY: Get last login time for display
+// ETHICS: Transparency - Show users when their account was last accessed
+// This helps users detect unauthorized access (credential theft mitigation)
+// =============================================
+$last_login_stmt = $conn->prepare("SELECT Last_login FROM admin WHERE User_id = ?");
+$last_login_stmt->bind_param("i", $admin_id);
+$last_login_stmt->execute();
+$last_login_result = $last_login_stmt->get_result();
+$last_login_row = $last_login_result->fetch_assoc();
+$last_login = $last_login_row['Last_login'] ?? null;
+$last_login_stmt->close();
+
+// Format last login for display
+if($last_login) {
+    $last_login_formatted = date('F j, Y \a\t g:i A', strtotime($last_login));
+    $days_ago = floor((time() - strtotime($last_login)) / (60 * 60 * 24));
+} else {
+    $last_login_formatted = 'First time login - Welcome!';
+    $days_ago = null;
+}
 
 // =============================================
 // FUNCTIONALITY: Get borrowed books count
@@ -253,6 +264,29 @@ if(isset($_POST['disable_2fa'])) {
         .welcome-section h1 { font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
         .welcome-section p { color: #b9bbbe; }
         
+        /* Last Login Info Box - ETHICS: Transparency */
+        .last-login-info {
+            background: rgba(99,102,241,0.1);
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin-top: 15px;
+            border-left: 3px solid #818cf8;
+            text-align: left;
+        }
+        .last-login-info i {
+            color: #818cf8;
+            margin-right: 8px;
+        }
+        .last-login-warning {
+            color: #fbbf24;
+            margin-left: 10px;
+        }
+        .last-login-help {
+            font-size: 12px;
+            color: #8b8d94;
+            margin-top: 5px;
+        }
+        
         /* Statistics Cards */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 50px; }
         .stat-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; text-align: center; transition: all 0.3s; }
@@ -369,10 +403,33 @@ if(isset($_POST['disable_2fa'])) {
     </div>
 
     <div class="container">
-        <!-- Welcome Section -->
+        <!-- Welcome Section with Last Login Display -->
         <div class="welcome-section">
             <h1>Welcome back, <?php echo htmlspecialchars($name); ?>! 👋</h1>
             <p>Your library journey continues here.</p>
+            
+            <!-- ============================================= -->
+            <!-- ETHICS & SECURITY: Last Login Display        -->
+            <!-- Shows users when their account was last used -->
+            <!-- Helps detect unauthorized access             -->
+            <!-- This addresses the Risk Register requirement -->
+            <!-- for "Credential theft via phishing"          -->
+            <!-- ============================================= -->
+            <div class="last-login-info">
+                <i class="fas fa-clock"></i>
+                <strong>Last account activity:</strong> <?php echo $last_login_formatted; ?>
+                <?php if($days_ago && $days_ago > 7): ?>
+                    <span class="last-login-warning">
+                        <i class="fas fa-exclamation-triangle"></i> It's been <?php echo $days_ago; ?> days since your last login
+                    </span>
+                <?php endif; ?>
+                <div class="last-login-help">
+                    <i class="fas fa-shield-alt"></i> 
+                    If you don't recognize this activity, please contact your librarian immediately.
+                    This helps protect your account from unauthorized access.
+                </div>
+            </div>
+            
             <?php if($is_2fa_enabled): ?>
                 <p style="margin-top: 10px; color: #34d399;"><i class="fas fa-shield-alt"></i> 2FA Protected Account</p>
             <?php endif; ?>
@@ -428,7 +485,7 @@ if(isset($_POST['disable_2fa'])) {
                 </form>
             <?php endif; ?>
             <p style="font-size: 12px; color: #8b8d94; margin-top: 15px;">
-                <i class="fas fa-info-circle"></i> When enabled, you'll receive a 6-digit code during login. Check your browser console (F12) for the demo code.
+                <i class="fas fa-info-circle"></i> When enabled, you'll receive a 6-digit code during login. Check your email for the verification code.
             </p>
         </div>
 
@@ -454,7 +511,7 @@ if(isset($_POST['disable_2fa'])) {
                 </div>
                 <div class="help-card">
                     <strong style="color: #fbbf24;">🔒 Privacy & Security</strong>
-                    <p>Your personal information is only used for library operations. Passwords are encrypted using bcrypt. Sessions automatically expire after 30 minutes of inactivity for your security.</p>
+                    <p>Your personal information is only used for library operations. Passwords are encrypted using bcrypt. Sessions automatically expire after 30 minutes of inactivity. Your last login time is displayed to help you detect unauthorized access.</p>
                 </div>
             </div>
             <div class="help-footer">
