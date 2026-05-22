@@ -57,6 +57,7 @@ $filter_role = $_GET['filter_role'] ?? '';
 $filter_status = $_GET['filter_status'] ?? '';
 
 // Build dynamic SQL query with parameter binding
+// list function
 $query = "SELECT * FROM admin WHERE 1=1";
 $params = [];
 $types = "";
