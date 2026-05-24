@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 22, 2026 at 11:51 AM
+-- Generation Time: May 24, 2026 at 01:57 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -49,18 +49,13 @@ CREATE TABLE `admin` (
 
 INSERT INTO `admin` (`User_id`, `Email`, `Password_hash`, `Role`, `Last_login`, `Created_at`, `Is_active`, `failed_attempts`, `locked_until`, `two_factor_enabled`, `two_factor_secret`, `two_factor_code`, `two_factor_expires`) VALUES
 (1, 'member@test.com', '$2y$10$U8jgasVpk6.EcNJMb.zBLuQf6gtt3sPrC7MUNZMHOFIwDYGqOJwyS', 'Member', '2026-05-20 07:38:38', '2026-05-08 09:55:05', 1, 0, NULL, 0, NULL, NULL, NULL),
-(2, 'librarian@test.com', '$2y$10$U8jgasVpk6.EcNJMb.zBLuQf6gtt3sPrC7MUNZMHOFIwDYGqOJwyS', 'Librarian', '2026-05-22 09:27:24', '2026-05-08 09:55:05', 1, 0, NULL, 0, NULL, NULL, NULL),
-(3, 'rabinghimire429@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Member', NULL, '2026-05-10 22:13:56', 1, 0, NULL, 0, NULL, NULL, NULL),
-(4, 'ghimirerabin50@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Member', '2026-05-11 07:56:02', '2026-05-10 22:19:08', 1, 0, NULL, 0, NULL, NULL, NULL),
+(2, 'librarian@test.com', '$2y$10$U8jgasVpk6.EcNJMb.zBLuQf6gtt3sPrC7MUNZMHOFIwDYGqOJwyS', 'Librarian', '2026-05-24 11:54:36', '2026-05-08 09:55:05', 1, 0, NULL, 0, NULL, NULL, NULL),
 (5, 'ggrabin50@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Member', '2026-05-10 20:25:49', '2026-05-10 22:25:37', 1, 0, NULL, 0, NULL, NULL, NULL),
 (6, 'rabin55@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Librarian', '2026-05-19 08:38:06', '2026-05-10 22:33:38', 1, 0, NULL, 0, NULL, NULL, NULL),
 (7, 'rabin67@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Member', '2026-05-11 08:07:51', '2026-05-11 10:07:38', 1, 0, NULL, 0, NULL, NULL, NULL),
-(9, 'rabin33@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Member', NULL, '2026-05-19 10:22:20', 1, 0, NULL, 0, NULL, NULL, NULL),
-(10, 'roshan@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Member', '2026-05-19 08:27:22', '2026-05-19 10:27:12', 1, 0, NULL, 0, NULL, NULL, NULL),
 (11, 'librarian@libtech.com', '$2y$10$U8jgasVpk6.EcNJMb.zBLuQf6gtt3sPrC7MUNZMHOFIwDYGqOJwyS', 'Librarian', NULL, '2026-05-19 10:33:47', 1, 0, NULL, 0, NULL, NULL, NULL),
 (12, 'admin@libtech.com', '$2y$10$U8jgasVpk6.EcNJMb.zBLuQf6gtt3sPrC7MUNZMHOFIwDYGqOJwyS', 'Librarian', NULL, '2026-05-19 10:34:19', 1, 0, NULL, 0, NULL, NULL, NULL),
 (14, 'testlibrarian@libtech.com', '$2y$10$U8jgasVpk6.EcNJMb.zBLuQf6gtt3sPrC7MUNZMHOFIwDYGqOJwyS', 'Librarian', NULL, '2026-05-19 10:36:40', 1, 0, NULL, 0, NULL, NULL, NULL),
-(15, 'rabinghimire66@gmail.com', '$2y$10$E9meWZksJXag/JwoDei/kuYDkFLssvdV9CdKLF2K7f.LFHFK/2jx.', 'Librarian', '2026-05-19 08:39:00', '2026-05-19 10:38:40', 1, 0, NULL, 0, NULL, NULL, NULL),
 (18, 'aayushapandit68@gmail.com', '$2y$10$esuHMz.7hcl5HKa3JGyjteUJgZxk60fHLUpRZfs2xs9Lw.WUz0sPi', 'Member', '2026-05-22 09:50:45', '2026-05-21 23:35:46', 1, 0, NULL, 0, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
@@ -186,7 +181,8 @@ INSERT INTO `login_log` (`log_id`, `email`, `success`, `ip_address`, `attempt_ti
 (10, 'librarian@test.com', 1, '::1', '2026-05-22 09:50:07', 'success', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'),
 (11, 'librarian@test.com', 1, '::1', '2026-05-22 10:43:26', 'success', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'),
 (12, 'librarian@test.com', 1, '::1', '2026-05-22 11:27:24', 'success', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'),
-(13, 'aayushapandit68@gmail.com', 1, '::1', '2026-05-22 11:50:45', 'success', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36');
+(13, 'aayushapandit68@gmail.com', 1, '::1', '2026-05-22 11:50:45', 'success', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'),
+(14, 'librarian@test.com', 1, '::1', '2026-05-24 13:54:36', 'success', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36');
 
 -- --------------------------------------------------------
 
@@ -212,12 +208,8 @@ CREATE TABLE `member` (
 INSERT INTO `member` (`member_id`, `admin_id`, `full_name`, `email`, `phone`, `membership_date`, `is_blocked`, `created_at`) VALUES
 (1, 1, 'Test Member', 'member@test.com', '555-0101', '2026-05-08', 0, '2026-05-08 09:55:05'),
 (2, 2, 'Aayusha Librarian', 'librarian@test.com', '555-0102', '2026-05-08', 0, '2026-05-08 09:55:05'),
-(3, 3, 'Rabin Ghimire', 'rabinghimire429@gmail.com', '91726984', '2026-05-10', 0, '2026-05-10 22:13:56'),
-(4, 4, 'Rabin ', 'ghimirerabin50@gmail.com', '91726984', '2026-05-10', 0, '2026-05-10 22:19:08'),
 (5, 5, 'Rabin Ghimire', 'ggrabin50@gmail.com', '91726984', '2026-05-10', 0, '2026-05-10 22:25:37'),
 (6, 7, 'Rabin', 'rabin67@gmail.com', '99335500', '2026-05-11', 0, '2026-05-11 10:07:38'),
-(8, 9, 'rabin', 'rabin33@gmail.com', '8888888', '2026-05-19', 0, '2026-05-19 10:22:20'),
-(9, 10, 'roshan', 'roshan@gmail.com', '888888', '2026-05-19', 0, '2026-05-19 10:27:12'),
 (10, 11, 'Head Librarian', 'librarian@libtech.com', '555-0000', '2026-05-19', 0, '2026-05-19 10:33:47'),
 (11, 12, 'System Administrator', 'admin@libtech.com', '000-0000', '2026-05-19', 0, '2026-05-19 10:34:19'),
 (12, 14, 'Test Librarian', 'testlibrarian@libtech.com', '555-1234', '2026-05-19', 0, '2026-05-19 10:36:40'),
@@ -245,9 +237,7 @@ CREATE TABLE `notification` (
 --
 
 INSERT INTO `notification` (`notification_id`, `member_id`, `notification_type`, `subject`, `message`, `sent_date`, `status`, `read_status`) VALUES
-(1, 1, 'borrow', 'Book Borrowed Confirmation', 'You have borrowed a book. Please return by due date.', '2026-05-08 07:55:05', '0', 0),
-(2, 4, 'borrow', '📖 Book Borrowed Confirmation - LibTech Solutions', 'Dear ghimirerabin50@gmail.com,\n\nYou have successfully borrowed \"1984\" by George Orwell.\n\n📅 Borrow Date: 2026-05-10\n⏰ Due Date: 2026-05-24\n\nPlease return the book by the due date to avoid fines of $0.50 per day.\n\nThank you for using LibTech Solutions!\n\nBest regards,\nLibTech Team', '2026-05-10 21:30:14', 'sent', 0),
-(4, 9, 'borrow', '📖 Book Borrowed Confirmation - LibTech Solutions', 'Dear roshan,\n\nYou have successfully borrowed \"The Great Gatsby\" by F. Scott Fitzgerald.\n\n📅 Borrow Date: 2026-05-19\n⏰ Due Date: 2026-06-02\n\nPlease return the book by the due date to avoid fines of $0.50 per day.\n\nThank you for using LibTech Solutions!\n\nBest regards,\nLibTech Team', '2026-05-19 08:27:50', 'sent', 0);
+(1, 1, 'borrow', 'Book Borrowed Confirmation', 'You have borrowed a book. Please return by due date.', '2026-05-08 07:55:05', '0', 0);
 
 -- --------------------------------------------------------
 
@@ -273,11 +263,7 @@ CREATE TABLE `transaction` (
 
 INSERT INTO `transaction` (`transaction_id`, `member_id`, `book_id`, `borrow_date`, `due_date`, `return_date`, `fine_amount`, `fine_paid`, `status`) VALUES
 (1, 1, 1, '2026-05-03', '2026-05-17', NULL, 0.00, 0, 'Borrowed'),
-(2, 1, 3, '2026-05-09', '2026-05-23', NULL, 0.00, 0, 'Borrowed'),
-(3, 4, 2, '2026-05-10', '2026-05-24', '2026-05-10', 0.00, 0, 'Returned'),
-(4, 4, 2, '2026-05-10', '2026-05-24', NULL, 0.00, 0, 'Borrowed'),
-(5, 4, 2, '2026-05-10', '2026-05-24', NULL, 0.00, 0, 'Borrowed'),
-(6, 9, 1, '2026-05-19', '2026-06-02', NULL, 0.00, 0, 'Borrowed');
+(2, 1, 3, '2026-05-09', '2026-05-23', NULL, 0.00, 0, 'Borrowed');
 
 --
 -- Indexes for dumped tables
@@ -364,7 +350,7 @@ ALTER TABLE `book`
 -- AUTO_INCREMENT for table `login_log`
 --
 ALTER TABLE `login_log`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `member`
