@@ -146,6 +146,32 @@ function deleteNotification($conn, $notification_id) {
     return $stmt->execute();
 }
 
+// =============================================
+// TEMPLATE HELPER FUNCTIONS (ADD THESE)
+// =============================================
+
+/**
+ * Get notification template by ID
+ */
+function getNotificationTemplate($conn, $template_id) {
+    $stmt = $conn->prepare("SELECT * FROM notification_templates WHERE template_id = ?");
+    $stmt->bind_param("i", $template_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
+/**
+ * Get all notification templates
+ */
+function getAllNotificationTemplates($conn, $type = 'all') {
+    $query = "SELECT * FROM notification_templates";
+    if($type != 'all') {
+        $query .= " WHERE template_type = '" . strtoupper($type) . "'";
+    }
+    $query .= " ORDER BY template_type, template_name";
+    return $conn->query($query)->fetch_all(MYSQLI_ASSOC);
+}
+
 // Include helper functions
 if(file_exists(__DIR__ . '/includes/validation.php')) {
     require_once __DIR__ . '/includes/validation.php';

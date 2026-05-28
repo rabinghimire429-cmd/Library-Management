@@ -1,8 +1,8 @@
 <?php
 /**
- * NOTIFICATION MODULE - LIBRARIAN MANAGEMENT PAGE
+ * NOTIFICATION TEMPLATE MANAGEMENT
  * 
- * FUNCTIONS: LIST, FILTER, SEARCH, DELETE, MARK AS READ, TEMPLATES
+ * FUNCTIONS: ADD, EDIT, DELETE, LIST, SEARCH, FILTER templates
  */
 
 session_start();
@@ -16,37 +16,70 @@ require_once 'NotificationClass.php';
 
 $notificationManager = new NotificationManager($conn);
 $message = '';
+$error = '';
+$edit_template = null;
 
-// DELETE
-if(isset($_GET['delete'])) {
-    if($notificationManager->deleteNotification($_GET['delete'])) {
-        $message = "✅ Notification deleted successfully";
+// ============ ADD TEMPLATE ============
+if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_template'])) {
+    $result = $notificationManager->addTemplate(
+        $_POST['template_name'],
+        $_POST['template_type'],
+        $_POST['subject'],
+        $_POST['message'],
+        $_POST['placeholders'] ?? ''
+    );
+    
+    if($result['success']) {
+        $message = "✅ Template created successfully!";
+    } else {
+        $error = implode('<br>', $result['errors']);
     }
 }
 
-// MARK AS READ
-if(isset($_GET['mark_read'])) {
-    $notificationManager->markAsRead($_GET['mark_read']);
-    $message = "✅ Notification marked as read";
+// ============ EDIT TEMPLATE - Get template data ============
+if(isset($_GET['edit'])) {
+    $edit_template = $notificationManager->findTemplate($_GET['edit']);
 }
 
-// Get filters
+// ============ UPDATE TEMPLATE ============
+if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_template'])) {
+    $result = $notificationManager->editTemplate(
+        $_POST['template_id'],
+        $_POST['template_name'],
+        $_POST['template_type'],
+        $_POST['subject'],
+        $_POST['message'],
+        $_POST['placeholders'] ?? ''
+    );
+    
+    if($result['success']) {
+        $message = "✅ Template updated successfully!";
+        $edit_template = null;
+    } else {
+        $error = implode('<br>', $result['errors']);
+    }
+}
+
+// ============ DELETE TEMPLATE ============
+if(isset($_GET['delete'])) {
+    if($notificationManager->deleteTemplate($_GET['delete'])) {
+        $message = "✅ Template deleted successfully!";
+    }
+}
+
+// Get filters and search
 $type_filter = $_GET['type'] ?? 'all';
-$status_filter = $_GET['status'] ?? 'all';
-$member_filter = $_GET['member'] ?? 'all';
 $search_query = $_GET['search'] ?? '';
 
-// Get data
-$notifications = $notificationManager->getAllNotifications($type_filter, $status_filter, $member_filter, $search_query);
-$members = $notificationManager->getAllMembers();
-$templates = $notificationManager->getTemplates();
+// Get templates
+$templates = $notificationManager->getTemplates($type_filter, $search_query);
 $stats = $notificationManager->getStatistics();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Notifications - LibTech</title>
+    <title>Notification Templates - Manage</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -54,152 +87,171 @@ $stats = $notificationManager->getStatistics();
         body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); min-height: 100vh; color: #e4e6eb; }
         .navbar { background: rgba(15,23,42,0.95); padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .logo-text { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .container { max-width: 1600px; margin: 30px auto; padding: 0 30px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .container { max-width: 1400px; margin: 30px auto; padding: 0 30px; }
+        
+        /* Stats Cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; text-align: center; }
         .stat-number { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #818cf8, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .templates-section { background: rgba(99,102,241,0.1); border-radius: 20px; padding: 25px; margin-bottom: 30px; }
-        .templates-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .template-card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; border-left: 4px solid; cursor: pointer; transition: 0.3s; }
-        .template-card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.08); }
-        .template-card.borrow { border-left-color: #3b82f6; }
-        .template-card.reminder { border-left-color: #10b981; }
-        .template-card.overdue { border-left-color: #ef4444; }
-        .template-card.fine { border-left-color: #f59e0b; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; }
-        h1 { font-size: 28px; }
-        .badge { background: #ef4444; border-radius: 50%; padding: 4px 12px; font-size: 12px; margin-left: 10px; }
-        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
-        .search-input { flex: 1; padding: 12px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 30px; color: white; }
-        .search-btn { padding: 12px 25px; background: #6366f1; border: none; border-radius: 30px; color: white; cursor: pointer; }
-        .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .filter-btn, select.filter-btn { padding: 8px 20px; background: rgba(255,255,255,0.1); border-radius: 25px; text-decoration: none; color: white; border: none; cursor: pointer; }
+        
+        /* Forms */
+        .form-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 25px; margin-bottom: 30px; }
+        .form-card h3 { margin-bottom: 20px; color: #a78bfa; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 15px; }
+        input, select, textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; font-family: inherit; }
+        textarea { min-height: 120px; resize: vertical; }
+        button { padding: 12px 25px; background: linear-gradient(135deg, #6366f1, #ec4899); border: none; border-radius: 12px; color: white; cursor: pointer; font-weight: 600; }
+        button:hover { transform: translateY(-2px); }
+        .cancel-btn { background: #4b5563; }
+        
+        /* Search and Filter */
+        .search-filter { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; align-items: center; }
+        .search-box { flex: 1; display: flex; gap: 10px; }
+        .search-box input { flex: 1; }
+        .filter-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 20px; background: rgba(255,255,255,0.1); border-radius: 25px; text-decoration: none; color: white; }
         .filter-btn.active { background: #6366f1; }
-        .table-container { overflow-x: auto; background: rgba(255,255,255,0.05); border-radius: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        th { background: rgba(0,0,0,0.3); }
-        .type-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        
+        /* Templates Grid */
+        .templates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .template-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; transition: 0.3s; }
+        .template-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.08); }
+        .template-type { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-bottom: 10px; }
         .type-BORROW { background: #dbeafe; color: #1e40af; }
         .type-REMINDER { background: #dcfce7; color: #166534; }
         .type-OVERDUE { background: #fee2e2; color: #b91c1c; }
         .type-FINE { background: #fef3c7; color: #92400e; }
-        .status-unread { color: #34d399; font-weight: bold; }
-        .actions a { margin-right: 12px; text-decoration: none; font-size: 13px; }
+        .template-name { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .template-subject { font-size: 13px; color: #9ca3af; margin-bottom: 10px; }
+        .template-message { font-size: 12px; color: #cbd5e1; line-height: 1.4; max-height: 60px; overflow: hidden; }
+        .template-actions { margin-top: 15px; display: flex; gap: 12px; }
+        .template-actions a { text-decoration: none; font-size: 13px; }
+        .send-btn { color: #34d399; }
         .edit-btn { color: #818cf8; }
         .delete-btn { color: #f87171; }
-        .btn-add { background: #10b981; padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; }
+        
         .success-msg { background: rgba(16,185,129,0.2); color: #34d399; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        .error-msg { background: rgba(239,68,68,0.2); color: #f87171; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        .btn-send-new { background: #10b981; padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
         .back-link { color: #818cf8; text-decoration: none; }
+        
+        @media (max-width: 768px) { .container { padding: 0 15px; } .templates-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
     <div class="navbar">
-        <span class="logo-text">📚 LibTech - Notification Manager</span>
+        <span class="logo-text">📋 Notification Template Manager</span>
         <a href="../librarian-dashboard.php" class="back-link">← Dashboard</a>
     </div>
     
     <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-bell"></i> All Notifications <span class="badge"><?php echo count($notifications); ?> total</span></h1>
-            <a href="send-notification.php" class="btn-add"><i class="fas fa-plus"></i> Send New</a>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h1><i class="fas fa-file-alt"></i> Notification Templates</h1>
+            <a href="send-notification.php" class="btn-send-new"><i class="fas fa-paper-plane"></i> Send Notification</a>
         </div>
         
-        <?php if($message): ?>
-            <div class="success-msg"><?php echo $message; ?></div>
-        <?php endif; ?>
+        <?php if($message): ?><div class="success-msg"><?php echo $message; ?></div><?php endif; ?>
+        <?php if($error): ?><div class="error-msg"><?php echo $error; ?></div><?php endif; ?>
         
-        <!-- Stats -->
+        <!-- Statistics -->
         <div class="stats-grid">
-            <div class="stat-card"><div class="stat-number"><?php echo $stats['total']; ?></div><div>Total</div></div>
+            <div class="stat-card"><div class="stat-number"><?php echo $stats['total_templates']; ?></div><div>Templates</div></div>
+            <div class="stat-card"><div class="stat-number"><?php echo $stats['total_notifications']; ?></div><div>Notifications Sent</div></div>
             <div class="stat-card"><div class="stat-number"><?php echo $stats['unread']; ?></div><div>Unread</div></div>
-            <div class="stat-card"><div class="stat-number"><?php echo $stats['by_type']['BORROW'] ?? 0; ?></div><div>Borrow</div></div>
-            <div class="stat-card"><div class="stat-number"><?php echo $stats['by_type']['REMINDER'] ?? 0; ?></div><div>Reminder</div></div>
-            <div class="stat-card"><div class="stat-number"><?php echo $stats['by_type']['OVERDUE'] ?? 0; ?></div><div>Overdue</div></div>
-            <div class="stat-card"><div class="stat-number"><?php echo $stats['by_type']['FINE'] ?? 0; ?></div><div>Fine</div></div>
         </div>
         
-        <!-- Templates -->
-        <div class="templates-section">
-            <h3 style="margin-bottom: 15px;">📋 Quick Templates (Click to use)</h3>
-            <div class="templates-grid">
-                <?php foreach($templates as $type => $template): ?>
-                    <div class="template-card <?php echo strtolower($type); ?>" onclick="window.location.href='send-notification.php?template=<?php echo $type; ?>'">
-                        <strong><?php echo $template['title']; ?></strong>
-                        <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;"><?php echo substr($template['template'], 0, 80); ?>...</div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        
-        <!-- Search -->
-        <div class="search-bar">
-            <form method="GET" style="display: flex; gap: 10px; width: 100%;">
-                <input type="text" name="search" class="search-input" placeholder="🔍 Search by message, member, or type..." value="<?php echo htmlspecialchars($search_query); ?>">
-                <input type="hidden" name="type" value="<?php echo $type_filter; ?>">
-                <input type="hidden" name="status" value="<?php echo $status_filter; ?>">
-                <input type="hidden" name="member" value="<?php echo $member_filter; ?>">
-                <button type="submit" class="search-btn"><i class="fas fa-search"></i> Search</button>
-                <?php if($search_query): ?>
-                    <a href="?type=<?php echo $type_filter; ?>&status=<?php echo $status_filter; ?>&member=<?php echo $member_filter; ?>" class="filter-btn">Clear</a>
+        <!-- ============ ADD / EDIT TEMPLATE FORM ============ -->
+        <div class="form-card">
+            <h3><i class="fas fa-<?php echo $edit_template ? 'edit' : 'plus'; ?>"></i> <?php echo $edit_template ? 'Edit Template' : 'Create New Template'; ?></h3>
+            <form method="POST">
+                <?php if($edit_template): ?>
+                    <input type="hidden" name="template_id" value="<?php echo $edit_template['template_id']; ?>">
                 <?php endif; ?>
+                <div class="form-row">
+                    <div>
+                        <label>Template Name</label>
+                        <input type="text" name="template_name" placeholder="e.g., Welcome Email, Overdue Notice" value="<?php echo $edit_template['template_name'] ?? ''; ?>" required>
+                    </div>
+                    <div>
+                        <label>Template Type</label>
+                        <select name="template_type" required>
+                            <option value="">Select Type</option>
+                            <option value="BORROW" <?php echo ($edit_template['template_type'] ?? '') == 'BORROW' ? 'selected' : ''; ?>>📚 Borrow</option>
+                            <option value="REMINDER" <?php echo ($edit_template['template_type'] ?? '') == 'REMINDER' ? 'selected' : ''; ?>>⏰ Reminder</option>
+                            <option value="OVERDUE" <?php echo ($edit_template['template_type'] ?? '') == 'OVERDUE' ? 'selected' : ''; ?>>⚠️ Overdue</option>
+                            <option value="FINE" <?php echo ($edit_template['template_type'] ?? '') == 'FINE' ? 'selected' : ''; ?>>💰 Fine</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label>Subject</label>
+                    <input type="text" name="subject" placeholder="Notification subject" value="<?php echo $edit_template['subject'] ?? ''; ?>" required>
+                </div>
+                <div>
+                    <label>Message Template</label>
+                    <textarea name="message" placeholder="Write your message here. Use {member_name} to insert member's name" required><?php echo $edit_template['message'] ?? ''; ?></textarea>
+                    <small style="color: #9ca3af;">💡 Tip: Use {member_name} to automatically insert the member's name</small>
+                </div>
+                <div>
+                    <label>Placeholders (comma separated, optional)</label>
+                    <input type="text" name="placeholders" placeholder="e.g., {book_title}, {due_date}, {fine_amount}" value="<?php echo $edit_template['placeholders'] ?? ''; ?>">
+                </div>
+                <div style="margin-top: 20px;">
+                    <?php if($edit_template): ?>
+                        <button type="submit" name="update_template"><i class="fas fa-save"></i> Update Template</button>
+                        <a href="manage.php" class="cancel-btn" style="padding: 12px 25px; background: #4b5563; border-radius: 12px; text-decoration: none; color: white; margin-left: 10px;">Cancel</a>
+                    <?php else: ?>
+                        <button type="submit" name="add_template"><i class="fas fa-plus"></i> Create Template</button>
+                    <?php endif; ?>
+                </div>
             </form>
         </div>
         
-        <!-- Filters -->
-        <div class="filter-bar">
-            <a href="?type=all&status=<?php echo $status_filter; ?>&member=<?php echo $member_filter; ?>&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='all'?'active':''; ?>">All</a>
-            <a href="?type=BORROW&status=<?php echo $status_filter; ?>&member=<?php echo $member_filter; ?>&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='BORROW'?'active':''; ?>">📚 Borrow</a>
-            <a href="?type=REMINDER&status=<?php echo $status_filter; ?>&member=<?php echo $member_filter; ?>&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='REMINDER'?'active':''; ?>">⏰ Reminder</a>
-            <a href="?type=OVERDUE&status=<?php echo $status_filter; ?>&member=<?php echo $member_filter; ?>&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='OVERDUE'?'active':''; ?>">⚠️ Overdue</a>
-            <a href="?type=FINE&status=<?php echo $status_filter; ?>&member=<?php echo $member_filter; ?>&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='FINE'?'active':''; ?>">💰 Fine</a>
-        </div>
-        
-        <div class="filter-bar">
-            <a href="?type=<?php echo $type_filter; ?>&status=all&member=<?php echo $member_filter; ?>&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $status_filter=='all'?'active':''; ?>">All Status</a>
-            <a href="?type=<?php echo $type_filter; ?>&status=unread&member=<?php echo $member_filter; ?>&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $status_filter=='unread'?'active':''; ?>">🔴 Unread</a>
-            <a href="?type=<?php echo $type_filter; ?>&status=read&member=<?php echo $member_filter; ?>&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $status_filter=='read'?'active':''; ?>">✅ Read</a>
-        </div>
-        
-        <div class="filter-bar">
-            <select class="filter-btn" onchange="window.location.href='?type=<?php echo $type_filter; ?>&status=<?php echo $status_filter; ?>&member='+this.value+'&search=<?php echo urlencode($search_query); ?>'">
-                <option value="all">All Members</option>
-                <?php foreach($members as $m): ?>
-                    <option value="<?php echo $m['member_id']; ?>" <?php echo $member_filter==$m['member_id']?'selected':''; ?>><?php echo htmlspecialchars($m['full_name'] ?: $m['email']); ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        
-        <!-- Table -->
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr><th>ID</th><th>Member</th><th>Type</th><th>Message</th><th>Date</th><th>Status</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                    <?php if(count($notifications) > 0): ?>
-                        <?php foreach($notifications as $n): ?>
-                            <tr>
-                                <td><?php echo $n['notification_id']; ?></td>
-                                <td><strong><?php echo htmlspecialchars($n['member_name']); ?></strong><br><small><?php echo $n['member_email']; ?></small></td>
-                                <td><span class="type-badge type-<?php echo $n['notification_type']; ?>"><?php echo $n['notification_type']; ?></span></td>
-                                <td style="max-width: 350px;"><?php echo htmlspecialchars(substr($n['message'], 0, 80)); ?>...</td>
-                                <td><?php echo date('M j, Y', strtotime($n['sent_date'])); ?></td>
-                                <td><?php echo $n['read_status'] ? '<span class="status-unread">🔴 Unread</span>' : '✅ Read'; ?></td>
-                                <td class="actions">
-                                    <?php if($n['read_status']): ?>
-                                        <a href="?mark_read=<?php echo $n['notification_id']; ?>" class="edit-btn">✓ Read</a>
-                                    <?php endif; ?>
-                                    <a href="edit-notification.php?id=<?php echo $n['notification_id']; ?>" class="edit-btn">✏️ Edit</a>
-                                    <a href="?delete=<?php echo $n['notification_id']; ?>" class="delete-btn" onclick="return confirm('Delete?')">🗑 Delete</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="7" style="text-align: center; padding: 40px;">No notifications found</td></tr>
+        <!-- ============ SEARCH AND FILTER ============ -->
+        <div class="search-filter">
+            <div class="search-box">
+                <form method="GET" style="display: flex; gap: 10px; width: 100%;">
+                    <input type="text" name="search" placeholder="🔍 Search templates by name, subject, or message..." value="<?php echo htmlspecialchars($search_query); ?>">
+                    <input type="hidden" name="type" value="<?php echo $type_filter; ?>">
+                    <button type="submit"><i class="fas fa-search"></i> Search</button>
+                    <?php if($search_query): ?>
+                        <a href="?type=<?php echo $type_filter; ?>" class="filter-btn">Clear</a>
                     <?php endif; ?>
-                </tbody>
-            </table>
+                </form>
+            </div>
+            <div class="filter-btns">
+                <a href="?type=all&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='all'?'active':''; ?>">All</a>
+                <a href="?type=BORROW&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='BORROW'?'active':''; ?>">📚 Borrow</a>
+                <a href="?type=REMINDER&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='REMINDER'?'active':''; ?>">⏰ Reminder</a>
+                <a href="?type=OVERDUE&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='OVERDUE'?'active':''; ?>">⚠️ Overdue</a>
+                <a href="?type=FINE&search=<?php echo urlencode($search_query); ?>" class="filter-btn <?php echo $type_filter=='FINE'?'active':''; ?>">💰 Fine</a>
+            </div>
+        </div>
+        
+        <!-- ============ TEMPLATES LIST ============ -->
+        <div class="templates-grid">
+            <?php if(count($templates) > 0): ?>
+                <?php foreach($templates as $template): ?>
+                    <div class="template-card">
+                        <span class="template-type type-<?php echo $template['template_type']; ?>">
+                            <?php echo $template['template_type']; ?>
+                        </span>
+                        <div class="template-name"><?php echo htmlspecialchars($template['template_name']); ?></div>
+                        <div class="template-subject">📧 <?php echo htmlspecialchars($template['subject']); ?></div>
+                        <div class="template-message"><?php echo htmlspecialchars(substr($template['message'], 0, 100)); ?>...</div>
+                        <div class="template-actions">
+                            <a href="send-notification.php?template_id=<?php echo $template['template_id']; ?>" class="send-btn"><i class="fas fa-paper-plane"></i> Send</a>
+                            <a href="?edit=<?php echo $template['template_id']; ?>" class="edit-btn"><i class="fas fa-edit"></i> Edit</a>
+                            <a href="?delete=<?php echo $template['template_id']; ?>" class="delete-btn" onclick="return confirm('Delete this template?')"><i class="fas fa-trash"></i> Delete</a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div style="text-align: center; padding: 60px; grid-column: 1/-1; background: rgba(255,255,255,0.05); border-radius: 20px;">
+                    <i class="fas fa-file-alt" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+                    No templates found. Create your first template above!
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>
