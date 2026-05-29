@@ -1,47 +1,83 @@
 <?php
+
+// Start session
 session_start();
+
+// Check if admin is logged in
 if(!isset($_SESSION['admin_id'])) {
     header('Location: ../index.php');
     exit();
 }
 
+// Connect to database
 require_once '../config.php';
 
+// Message variables
 $msg = '';
 $error = '';
 
+// Check if form is submitted
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // CSRF Protection
+
+    // Security check
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
         $error = "Security validation failed. Please refresh the page and try again.";
     } else {
+
+        // Get book details from form
         $title = sanitizeInput($_POST['title']);
         $author = sanitizeInput($_POST['author']);
         $isbn = sanitizeInput($_POST['isbn']);
         $genre = $_POST['genre'];
+
+        // Get number of copies
         $total_copies = (int)$_POST['total_copies'];
-        
-        // Validation
+
+        // Validation checks
         $errors = [];
+
+        // Check title
         if(empty($title)) $errors[] = "Title is required";
+
+        // Check author
         if(empty($author)) $errors[] = "Author is required";
+
+        // Check ISBN format
         if(!validateISBN($isbn)) $errors[] = "Invalid ISBN format";
+
+        // Check copies
         if($total_copies < 1) $errors[] = "Total copies must be at least 1";
-        
+
+        // If there are no errors
         if(empty($errors)) {
-            // Secure prepared statement
+
+            // Add book to database
             $stmt = $conn->prepare("INSERT INTO book (title, author, isbn, genre, total_copies, available_copies) VALUES (?, ?, ?, ?, ?, ?)");
+
+            // Bind values
             $stmt->bind_param("ssssii", $title, $author, $isbn, $genre, $total_copies, $total_copies);
-            
+
+            // Execute query
             if($stmt->execute()) {
+
+                // Success message
                 $msg = " Book added successfully!";
-                // Log the action
+
+                // Save activity log
                 logAdminAction($conn, $_SESSION['admin_id'], 'ADD_BOOK', "Added book: $title (ISBN: $isbn)");
+
             } else {
+
+                // Error message
                 $error = " Error adding book: " . $conn->error;
             }
+
+            // Close query
             $stmt->close();
+
         } else {
+
+            // Show validation errors
             $error = implode("<br>", $errors);
         }
     }
