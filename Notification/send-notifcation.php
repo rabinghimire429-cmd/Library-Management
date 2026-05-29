@@ -1,13 +1,9 @@
 <?php
-/**
- * SEND NOTIFICATION - Using Templates
- * 
- * FUNCTIONS: SELECT TEMPLATE, SELECT MEMBER, SEND, VALIDATE
- */
-
-session_start();
+// Notification/send-notification.php - STANDALONE WORKING VERSION
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
+session_start();
 
 if(!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] != 'Librarian') {
     header('Location: ../index.php');
@@ -15,40 +11,63 @@ if(!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] != 'Librarian') {
 }
 
 require_once '../config.php';
-require_once 'NotificationClass.php';
 
-$notificationManager = new NotificationManager($conn);
 $success = '';
 $error = '';
-$selected_template = null;
 
-// Get template if selected
-if(isset($_GET['template_id'])) {
-    $selected_template = $notificationManager->findTemplate($_GET['template_id']);
+// Get members directly from database
+$members = [];
+$members_result = $conn->query("SELECT member_id, full_name, email FROM member ORDER BY full_name");
+if($members_result) {
+    while($row = $members_result->fetch_assoc()) {
+        $members[] = $row;
+    }
 }
 
-// Get all members - DEBUG to see if members exist
-$members = $notificationManager->getAllMembers();
-$templates = $notificationManager->getTemplates();
-
-// Debug: Check if members exist
-if(empty($members)) {
-    $error = "No members found in database. Please add members first.";
+// Get templates directly from database
+$templates = [];
+$templates_result = $conn->query("SELECT * FROM notification_templates ORDER BY template_type, template_name");
+if($templates_result) {
+    while($row = $templates_result->fetch_assoc()) {
+        $templates[] = $row;
+    }
 }
 
-// Handle sending
+// Handle form submission
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
     $member_id = $_POST['member_id'];
     $template_id = $_POST['template_id'];
-    $custom_message = !empty($_POST['custom_message']) ? $_POST['custom_message'] : null;
-    $custom_subject = !empty($_POST['custom_subject']) ? $_POST['custom_subject'] : null;
+    $custom_message = trim($_POST['custom_message'] ?? '');
     
-    $result = $notificationManager->sendNotification($member_id, $template_id, $custom_message, $custom_subject);
+    // Get selected template
+    $stmt = $conn->prepare("SELECT * FROM notification_templates WHERE template_id = ?");
+    $stmt->bind_param("i", $template_id);
+    $stmt->execute();
+    $template = $stmt->get_result()->fetch_assoc();
     
-    if($result['success']) {
-        $success = "✅ Notification sent successfully!";
+    // Get selected member
+    $stmt = $conn->prepare("SELECT * FROM member WHERE member_id = ?");
+    $stmt->bind_param("i", $member_id);
+    $stmt->execute();
+    $member = $stmt->get_result()->fetch_assoc();
+    
+    if($member && $template) {
+        // Use custom message or template message
+        $final_message = !empty($custom_message) ? $custom_message : $template['message'];
+        // Replace placeholder with member name
+        $final_message = str_replace('{member_name}', $member['full_name'] ?? 'Member', $final_message);
+        
+        // Insert notification
+        $insert = $conn->prepare("INSERT INTO notification (member_id, message, notification_type, sent_date, read_status) VALUES (?, ?, ?, NOW(), 1)");
+        $insert->bind_param("iss", $member_id, $final_message, $template['template_type']);
+        
+        if($insert->execute()) {
+            $success = "✅ Notification sent successfully to " . htmlspecialchars($member['full_name'] ?? $member['email']) . "!";
+        } else {
+            $error = "Database error: " . $conn->error;
+        }
     } else {
-        $error = implode('<br>', $result['errors']);
+        $error = "Member or Template not found";
     }
 }
 ?>
@@ -56,24 +75,23 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Send Notification - LibTech</title>
+    <title>Send Notification</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); min-height: 100vh; color: #e4e6eb; padding: 40px; }
-        .container { max-width: 700px; margin: 0 auto; background: rgba(255,255,255,0.1); border-radius: 30px; padding: 40px; border: 1px solid rgba(255,255,255,0.2); }
+        .container { max-width: 600px; margin: 0 auto; background: rgba(255,255,255,0.1); border-radius: 30px; padding: 40px; border: 1px solid rgba(255,255,255,0.2); }
         h1 { text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, #fff, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         label { display: block; margin: 15px 0 5px; font-weight: 500; }
-        select, textarea, input { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; font-family: inherit; }
-        textarea { min-height: 150px; resize: vertical; }
+        select, textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; font-family: inherit; }
+        textarea { min-height: 120px; resize: vertical; }
         button { width: 100%; padding: 14px; margin-top: 20px; background: linear-gradient(135deg, #6366f1, #ec4899); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; }
         button:hover { transform: translateY(-2px); }
-        .success { background: rgba(16,185,129,0.2); color: #34d399; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
-        .error { background: rgba(239,68,68,0.2); color: #f87171; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+        .success { background: rgba(16,185,129,0.2); color: #34d399; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; border-left: 3px solid #34d399; }
+        .error { background: rgba(239,68,68,0.2); color: #f87171; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center; border-left: 3px solid #f87171; }
         .back-link { display: inline-block; margin-top: 20px; color: #818cf8; text-decoration: none; }
-        .template-preview { background: rgba(99,102,241,0.1); padding: 15px; border-radius: 12px; margin: 15px 0; font-size: 13px; border-left: 3px solid #6366f1; }
-        .help-text { font-size: 12px; color: #9ca3af; margin-top: 5px; }
+        .preview-box { background: rgba(99,102,241,0.1); padding: 15px; border-radius: 12px; margin: 15px 0; font-size: 13px; border-left: 3px solid #6366f1; display: none; }
+        .info-text { font-size: 12px; color: #9ca3af; margin-top: 5px; text-align: right; }
     </style>
 </head>
 <body>
@@ -89,46 +107,31 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         <?php endif; ?>
         
         <form method="POST">
-            <!-- Select Member Dropdown -->
             <label><i class="fas fa-user"></i> Select Member:</label>
             <select name="member_id" required>
                 <option value="">-- Choose Member --</option>
-                <?php if(!empty($members)): ?>
-                    <?php foreach($members as $m): ?>
-                        <option value="<?php echo $m['member_id']; ?>">
-                            <?php echo htmlspecialchars($m['full_name'] ?: $m['email']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <option value="" disabled>No members found</option>
-                <?php endif; ?>
+                <?php foreach($members as $m): ?>
+                    <option value="<?php echo $m['member_id']; ?>">
+                        <?php echo htmlspecialchars($m['full_name'] ?: $m['email']); ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
             
-            <!-- Select Template Dropdown -->
             <label><i class="fas fa-file-alt"></i> Select Template:</label>
             <select name="template_id" id="template_select" required>
                 <option value="">-- Choose Template --</option>
-                <?php if(!empty($templates)): ?>
-                    <?php foreach($templates as $t): ?>
-                        <option value="<?php echo $t['template_id']; ?>" <?php echo ($selected_template && $selected_template['template_id'] == $t['template_id']) ? 'selected' : ''; ?>>
-                            [<?php echo $t['template_type']; ?>] <?php echo htmlspecialchars($t['template_name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <option value="" disabled>No templates found. Create one first.</option>
-                <?php endif; ?>
+                <?php foreach($templates as $t): ?>
+                    <option value="<?php echo $t['template_id']; ?>">
+                        [<?php echo $t['template_type']; ?>] <?php echo htmlspecialchars($t['template_name']); ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
             
-            <!-- Optional Override Fields -->
-            <label><i class="fas fa-edit"></i> Custom Subject (Optional):</label>
-            <input type="text" name="custom_subject" id="custom_subject" placeholder="Leave blank to use template subject">
+            <div id="preview_box" class="preview-box"></div>
             
-            <label><i class="fas fa-comment"></i> Custom Message (Optional):</label>
-            <textarea name="custom_message" id="custom_message" placeholder="Leave blank to use template message"></textarea>
-            <div class="help-text">💡 Tip: Leave blank to use the template's message. Customize if you want to override.</div>
-            
-            <!-- Template Preview -->
-            <div id="template_preview" class="template-preview" style="display: none;"></div>
+            <label><i class="fas fa-edit"></i> Custom Message (Optional):</label>
+            <textarea name="custom_message" id="custom_message" rows="5" placeholder="Leave blank to use template message"></textarea>
+            <div class="info-text">💡 Tip: Use {member_name} to insert the member's name</div>
             
             <button type="submit"><i class="fas fa-paper-plane"></i> Send Notification</button>
         </form>
@@ -139,44 +142,38 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     </div>
     
     <script>
-        // Template data for preview
+        // Store templates for preview
         const templates = <?php 
-            $template_data = [];
-            if(!empty($templates)) {
-                foreach($templates as $t) {
-                    $template_data[$t['template_id']] = [
-                        'subject' => $t['subject'],
-                        'message' => $t['message']
-                    ];
-                }
+            $data = [];
+            foreach($templates as $t) {
+                $data[$t['template_id']] = [
+                    'type' => $t['template_type'],
+                    'name' => $t['template_name'],
+                    'message' => $t['message']
+                ];
             }
-            echo json_encode($template_data);
+            echo json_encode($data);
         ?>;
         
         const templateSelect = document.getElementById('template_select');
-        const subjectInput = document.getElementById('custom_subject');
-        const messageTextarea = document.getElementById('custom_message');
-        const previewDiv = document.getElementById('template_preview');
+        const previewBox = document.getElementById('preview_box');
+        const messageBox = document.getElementById('custom_message');
         
-        if(templateSelect) {
-            templateSelect.addEventListener('change', function() {
-                const templateId = this.value;
-                if(templateId && templates[templateId]) {
-                    subjectInput.placeholder = templates[templateId].subject;
-                    messageTextarea.placeholder = templates[templateId].message;
-                    previewDiv.innerHTML = '<strong>📋 Template Preview:</strong><br>📧 ' + templates[templateId].subject + '<br><br>' + templates[templateId].message.replace(/\n/g, '<br>');
-                    previewDiv.style.display = 'block';
-                } else {
-                    subjectInput.placeholder = 'Leave blank to use template subject';
-                    messageTextarea.placeholder = 'Leave blank to use template message';
-                    previewDiv.style.display = 'none';
-                }
-            });
-            
-            // Trigger change if template pre-selected
-            if(templateSelect.value) {
-                templateSelect.dispatchEvent(new Event('change'));
+        templateSelect.addEventListener('change', function() {
+            const id = this.value;
+            if(id && templates[id]) {
+                previewBox.innerHTML = '<strong>📋 Template Preview:</strong><br>' + templates[id].message.replace(/\n/g, '<br>');
+                previewBox.style.display = 'block';
+                messageBox.placeholder = 'Leave blank to use the template above';
+            } else {
+                previewBox.style.display = 'none';
+                messageBox.placeholder = 'Enter your custom message here...';
             }
+        });
+        
+        // Trigger on page load if template pre-selected
+        if(templateSelect.value) {
+            templateSelect.dispatchEvent(new Event('change'));
         }
     </script>
 </body>
