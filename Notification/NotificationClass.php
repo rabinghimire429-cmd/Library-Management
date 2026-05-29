@@ -319,13 +319,31 @@ class NotificationManager {
         return $stmt->get_result()->fetch_assoc()['count'];
     }
     
-    /**
-     * GET ALL MEMBERS
-     */
-    public function getAllMembers() {
-        $result = $this->conn->query("SELECT member_id, full_name, email FROM member ORDER BY full_name");
-        return $result->fetch_all(MYSQLI_ASSOC);
+   /**
+ * GET ALL MEMBERS
+ */
+public function getAllMembers() {
+    // First check if member table exists
+    $check_table = $this->conn->query("SHOW TABLES LIKE 'member'");
+    if($check_table->num_rows == 0) {
+        return [];
     }
+    
+    // Query members
+    $result = $this->conn->query("SELECT member_id, full_name, email FROM member ORDER BY member_id");
+    
+    if(!$result) {
+        echo "<!-- SQL Error: " . $this->conn->error . " -->";
+        return [];
+    }
+    
+    $members = [];
+    while($row = $result->fetch_assoc()) {
+        $members[] = $row;
+    }
+    
+    return $members;
+}
     
     /**
      * GET STATISTICS
